@@ -1,0 +1,10 @@
+{application, bootstrap,
+  [{description, "A simple yet flexible cluster bootstrapping application."},
+   {id, "com.github.schlagert"},
+   {vsn, "0.0.1"},
+   {registered,
+    [
+    ]},
+   {applications, [kernel, stdlib, sasl]},
+   {mod, {bootstrap, []}},
+   {env, []}]}.
