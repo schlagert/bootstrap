@@ -66,6 +66,8 @@ start_link() -> gen_fsm:start_link(?MODULE, [], []).
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
+    process_flag(trap_exit, true),
+    ok = net_kernel:monitor_nodes(true, [nodedown_reason]),
     {ok, Master} = re:compile(get_env(master, atom_to_list(node()))),
     Ports = get_env(ports, [50337, 50338, 50339]),
     {ok, Socket} = open(Ports),
@@ -90,10 +92,16 @@ handle_info({udp, S, IP, Port, Data}, StateName, State = #state{socket = S}) ->
     try binary_to_term(Data) of
         Term -> ?MODULE:StateName({IP, Port, Term}, State)
     catch
-        _:_ -> {next_state, StateName, State}
+        _:_  -> {next_state, StateName, State}
     end;
 handle_info({udp_closed, S}, _StateName, State = #state{socket = S}) ->
     {stop, udp_closed, State};
+handle_info({nodeup, Node, _}, StateName, State) ->
+    %% notify connected
+    {next_state, StateName, State};
+handle_info({nodedown, Node, [{nodedown_reason, Reason}]}, StateName, State) ->
+    %% notify disconnected
+    {next_state, StateName, State};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
 
@@ -105,8 +113,7 @@ code_change(_OldVsn, StateName, State, _Extra) -> {ok, StateName, State}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-terminate(_Reason, _StateName, #state{socket = Socket}) ->
-    gen_udp:close(Socket).
+terminate(_Reason, _StateName, #state{socket = S}) -> gen_udp:close(S).
 
 %%%=============================================================================
 %%% gen_fsm states
@@ -116,15 +123,20 @@ terminate(_Reason, _StateName, #state{socket = Socket}) ->
 %% @private
 %%------------------------------------------------------------------------------
 slave({_, _, ?bootstrap_pong(Node)}, State) ->
-    {next_state, slave, maybe_connect(Node, State)};
+    case match(Node, State) of
+        true  -> net_kernel:connect(Node);
+        false -> ok
+    end,
+    {next_state, slave, State};
 slave(_Evt, State) ->
     {next_state, slave, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-master({IP, Port, ?bootstrap_ping(_)}, State) ->
-    {next_state, master, send(?bootstrap_pong(node()), IP, Port, State)};
+master({IP, Port, ?bootstrap_ping(_)}, State = #state{socket = S}) ->
+    ok = gen_udp:send(S, IP, Port, term_to_binary(?bootstrap_pong(node()))),
+    {next_state, master, State};
 master(_Evt, State) ->
     {next_state, master, State}.
 
