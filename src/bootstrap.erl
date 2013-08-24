@@ -31,6 +31,9 @@
 %% API
 -export([add_handler/2, delete_handler/1, handlers/0]).
 
+%% Internal API
+-export([set_env/2, get_env/2]).
+
 %% Application callbacks
 -export([start/2, stop/1]).
 
@@ -87,6 +90,26 @@ delete_handler(Module) -> bootstrap_handlers:delete(Module).
 handlers() -> [Module || {Module, _} <- bootstrap_handlers:to_list()].
 
 %%%=============================================================================
+%%% Internal API
+%%%=============================================================================
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec set_env(atom(), term()) -> ok | {error, term()}.
+set_env(Key, Value) -> application:set_env(?MODULE, Key, Value).
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec get_env(atom(), term()) -> term().
+get_env(Key, Default) ->
+    case application:get_env(?MODULE, Key) of
+        {ok, Value} -> Value;
+        _           -> Default
+    end.
+
+%%%=============================================================================
 %%% Application callbacks
 %%%=============================================================================
 
@@ -119,17 +142,3 @@ init([]) ->
 %% @private
 %%------------------------------------------------------------------------------
 spec(M) -> {M, {M, start_link, []}, permanent, brutal_kill, worker, [M]}.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-set_env(Key, Value) -> application:set_env(?MODULE, Key, Value).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-get_env(Key, Default) ->
-    case application:get_env(?MODULE, Key) of
-        {ok, Value} -> Value;
-        _           -> Default
-    end.
