@@ -4,6 +4,8 @@
    {vsn, "0.0.1"},
    {registered,
     [
+     bootstrap_event,
+     bootstrap_monitor
     ]},
    {applications, [kernel, stdlib, sasl]},
    {mod, {bootstrap, []}},

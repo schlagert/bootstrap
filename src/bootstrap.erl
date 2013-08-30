@@ -29,32 +29,41 @@
 -behaviour(supervisor).
 
 %% API
--export([add_handler/2, delete_handler/1, handlers/0]).
+-export([add_handler/2,
+	 add_sup_handler/2,
+	 delete_handler/1,
+	 handlers/0]).
 
 %% Internal API
--export([set_env/2, get_env/2]).
+-export([set_env/2,
+	 get_env/2]).
 
 %% Application callbacks
--export([start/2, stop/1]).
+-export([start/2,
+	 stop/1]).
 
 %% supervisor callbacks
 -export([init/1]).
+
+-type arg() :: term().
+
+-export_type([arg/0]).
+
+-include("bootstrap.hrl").
 
 %%%=============================================================================
 %%% Behaviour
 %%%=============================================================================
 
--callback on_connected(node(), State :: term()) ->
-    NewState :: term().
-%% Called whenever a connection to a node matching the `master' regex has been
-%% established. This may occur multiple times. The returned term will be the new
-%% handler state. If the handler fails (throws an expection) it will be removed.
+-callback on_connected(node(), arg()) -> arg().
+%% Called whenever a connection to a node matching the `connect_to' regex has
+%% been established. This may occur multiple times. The returned term will be
+%% the new handler state. Exceptions thrown by this function will be discarded.
 
--callback on_disconnected(node(), Reason :: term(), State :: term()) ->
-    NewState :: term().
-%% Called whenever a connection to a node matching the `master' regex has been
-%% lost. This may also occur multiple times. The returned term will be the new
-%% handler state. If the handler fails (throws an expection) it will be removed.
+-callback on_disconnected(node(), Reason :: term(), arg()) -> arg().
+%% Called whenever a connection to a node matching the `connect_to' regex has
+%% been lost. This may also occur multiple times. The returned term will be the
+%% new handler state. Exceptions thrown by this function will be discarded.
 
 %%%=============================================================================
 %%% API
@@ -67,10 +76,27 @@
 %% be added once per time. If the same module was already added before it must
 %% be deleted in advance. There's no limit on the number of different added
 %% handler modules. Callback processing is sequential and in order of addition.
+%% To remove a bootstrap handler {@link delete_handler/1} must be called.
 %% @end
 %%------------------------------------------------------------------------------
--spec add_handler(module(), State :: term()) -> ok | {error, term()}.
-add_handler(Module, State) -> bootstrap_handlers:add(Module, State).
+-spec add_handler(module(), arg()) -> ok | {error, term()}.
+add_handler(Module, Arg) ->
+    Handler = #bootstrap_handler{module = Module, arg = Arg},
+    bootstrap_monitor:add(Handler).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% This function works much like {@link add_handler/2} but additionally the
+%% calling process will be associated with the bootstrap handler. This means
+%% that the calling process will be monitored and the corresponding handler
+%% will be removed as soon as the associated process exits. Alternatively the
+%% handler can be removed manually using {@link delete_handler/1}.
+%% @end
+%%------------------------------------------------------------------------------
+-spec add_sup_handler(module(), arg()) -> ok | {error, term()}.
+add_sup_handler(Module, Arg) ->
+    Handler = #bootstrap_handler{pid = self(), module = Module, arg = Arg},
+    bootstrap_monitor:add(Handler).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -79,7 +105,9 @@ add_handler(Module, State) -> bootstrap_handlers:add(Module, State).
 %% @end
 %%------------------------------------------------------------------------------
 -spec delete_handler(module()) -> ok.
-delete_handler(Module) -> bootstrap_handlers:delete(Module).
+delete_handler(Module) ->
+    bootstrap_event:delete(Module),
+    ok.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -87,7 +115,7 @@ delete_handler(Module) -> bootstrap_handlers:delete(Module).
 %% @end
 %%------------------------------------------------------------------------------
 -spec handlers() -> [module()].
-handlers() -> [Module || {Module, _} <- bootstrap_handlers:to_list()].
+handlers() -> bootstrap_event:list().
 
 %%%=============================================================================
 %%% Internal API
@@ -116,12 +144,20 @@ get_env(Key, Default) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-start(_StartType, _StartArgs) -> supervisor:start_link(?MODULE, []).
+start(_StartType, _StartArgs) ->
+    case supervisor:start_link(?MODULE, []) of
+	Result = {ok, _} ->
+	    [bootstrap_monitor:add(H) || H <- get_env(handlers, [])],
+	    ok = set_env(handlers, []),
+	    Result;
+	Result ->
+	    Result
+    end.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-stop(_State) -> set_env(handlers, bootstrap_handlers:to_list()).
+stop(_State) -> ok.
 
 %%%=============================================================================
 %%% supervisor callbacks
@@ -131,8 +167,8 @@ stop(_State) -> set_env(handlers, bootstrap_handlers:to_list()).
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
-    ok = bootstrap_handlers:init(get_env(handlers, [])),
-    {ok, {{one_for_one, 5, 10}, [spec(bootstrap_protocol)]}}.
+    Specs = [event_mgr(bootstrap_event), server(bootstrap_monitor)],
+    {ok, {{one_for_one, 5, 10}, Specs}}.
 
 %%%=============================================================================
 %%% internal functions
@@ -141,4 +177,14 @@ init([]) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-spec(M) -> {M, {M, start_link, []}, permanent, brutal_kill, worker, [M]}.
+server(M) -> spec(M, [M]).
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+event_mgr(M) -> spec(M, dynamic).
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+spec(M, Ms) -> {M, {M, start_link, []}, permanent, brutal_kill, worker, Ms}.

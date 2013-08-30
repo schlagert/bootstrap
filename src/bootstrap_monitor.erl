@@ -14,20 +14,15 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%
 %%% @doc
-%%% A server managing bootstrap handler registrations.
 %%% @end
 %%%=============================================================================
--module(bootstrap_reg).
+-module(bootstrap_monitor).
 
 -behaviour(gen_server).
 
 %% API
 -export([start_link/0,
-	 add/2,
-	 add_sup/2,
-	 delete/1,
-	 get/0,
-	 update/1]).
+	 add/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -37,15 +32,14 @@
          code_change/3,
          terminate/2]).
 
+-include("bootstrap.hrl").
+
 %%%=============================================================================
 %%% API
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Start a registered server that keeps track of bootstrap handler
-%% registrations. Registered handlers will be saved in the application
-%% environment to be able to savely restart the server (and the application).
 %% @end
 %%------------------------------------------------------------------------------
 -spec start_link() -> {ok, pid()} | {error, term()}.
@@ -53,94 +47,58 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Add a handler module. Duplicate module registrations will not be accepted.
 %% @end
 %%------------------------------------------------------------------------------
--spec add(module(), State :: term()) -> ok | {error, term()}.
-add(Module, State) ->
-    gen_server:call(?MODULE, {add, {{Module, State}, undefined}}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Add a handler module. Handlers added with this function will automatically
-%% be removed when the calling process exits. Duplicate module registrations
-%% will not be accepted.
-%% @end
-%%------------------------------------------------------------------------------
--spec add_sup(module(), State :: term()) -> ok | {error, term()}.
-add_sup(Module, State) ->
-    gen_server:call(?MODULE, {add, {{Module, State}, {self(), undefined}}}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Deletes a registered handler module. This function never fails.
-%% @end
-%%------------------------------------------------------------------------------
--spec delete(module()) -> ok.
-delete(Module) -> gen_server:cast(?MODULE, {delete, Module}).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Returns a list of all bootstrap handlers and their current state.
-%% @end
-%%------------------------------------------------------------------------------
--spec get() -> [{module(), State :: term()}].
-get() -> [Handler || {Handler, _} <- gen_server:call(?MODULE, get)].
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Update the states of the given bootstrap handlers. This will only update
-%% existing handler entries and will not add new handlers. This function never
-%% fails.
-%% @end
-%%------------------------------------------------------------------------------
--spec update([{module(), State :: term()}]) -> ok.
-update(Handlers) -> gen_server:cast(?MODULE, {update, Handlers}).
+-spec add(#bootstrap_handler{}) -> ok | {error, term()}.
+add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 
 %%%=============================================================================
 %%% gen_server callbacks
 %%%=============================================================================
 
--type entry()     :: {{module(), term()}, undefined}.
--type sup_entry() :: {{module(), term()}, {pid(), reference()}}.
-
--record(state, {handlers = [] :: [entry() | sup_entry()]}).
+-record(state, {
+	  regex         :: re:mp(),
+	  handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
-    process_flag(trap_exit, true),
-    SavedHs = bootstrap:get_env(handlers, []),
-    AddFun = fun(Entry, State) -> element(2, add_impl(Entry, State)) end,
-    {ok, lists:foldr(AddFun, #state{}, SavedHs)}.
+    ok = net_kernel:monitor_nodes(true, [nodedown_reason]),
+    case bootstrap:get_env(connect_to, undefined) of
+	undefined ->
+	    State = #state{regex = undefined};
+	Regex when is_list(Regex) ->
+	    {ok, Compiled} = re:compile(Regex),
+	    State = #state{regex = Compiled}
+    end,
+    {ok, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_call({add, Handler}, _From, State) ->
-    {Reply, NewState} = add_impl(Handler, State),
+handle_call({add, Entry}, _From, State) ->
+    {Reply, NewState} = handle_add(Entry, State),
     {reply, Reply, NewState};
-handle_call(get, _From, State = #state{handlers = Hs}) ->
-    {reply, lists:reverse(Hs), State};
 handle_call(_Request, _From, State) ->
     {reply, undef, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_cast({delete, Module}, State) ->
-    {noreply, delete_impl(Module, State)};
-handle_cast({update, Handlers}, State) ->
-    {noreply, update_impl(Handlers, State)};
-handle_cast(_Request, State) ->
-    {noreply, State}.
+handle_cast(_Request, State) -> {noreply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_info({'DOWN', _, process, Pid, _}, State) ->
-    {noreply, delete_impl(Pid, State)};
+handle_info({gen_event_EXIT, ?BOOTSTRAP_HANDLER(Module), _}, State) ->
+    {noreply, handle_exit(Module, State)};
+handle_info({'DOWN', Ref, process, _, _}, State) ->
+    {noreply, handle_down(Ref, State)};
+handle_info({nodeup, Node, _}, State) ->
+    {noreply, handle_nodeup(Node, State)};
+handle_info({nodedown, Node, [{nodedown_reason, Reason}]}, State) ->
+    {noreply, handle_nodedown(Node, Reason, State)};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -152,54 +110,82 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-terminate(_Reason, #state{handlers = Hs}) -> bootstrap:set_env(handlers, Hs).
+terminate(_Reason, _State) -> ok.
 
 %%%=============================================================================
-%%% internal functions
+%%% Internal functions
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-add_impl(Entry = {{Module, _}, _}, State) ->
-    add_impl(already_added(Module, State), Entry, State).
+get_nodes(#state{regex = undefined}) ->
+    [node()];
+get_nodes(State) ->
+    [Node || Node <- [node() | nodes()], match(Node, State)].
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-add_impl(false, Entry = {_, undefined}, State = #state{handlers = Hs}) ->
-    {ok, State#state{handlers = [Entry | Hs]}};
-add_impl(false, {Handler, {Pid, _}}, State = #state{handlers = Hs}) ->
-    Entry = {Handler, {Pid, monitor(process, Pid)}},
-    {ok, State#state{handlers = [Entry | Hs]}};
-add_impl(true, _, State) ->
-    {{error, already_added}, State}.
+handle_add(Handler = #bootstrap_handler{pid = undefined}, State) ->
+    case bootstrap_event:add(Handler) of
+	ok ->
+	    bootstrap_event:on_connected(Handler, get_nodes(State)),
+	    {ok, State};
+	Reason ->
+	    {{error, Reason}, State}
+    end;
+handle_add(Handler = #bootstrap_handler{pid = Pid}, State) ->
+    case bootstrap_event:add(Handler) of
+	ok ->
+	    bootstrap_event:on_connected(Handler, get_nodes(State)),
+	    Entry = {monitor(process, Pid), Handler},
+	    {ok, State#state{handlers = [Entry | State#state.handlers]}};
+	Reason ->
+	    {{error, Reason}, State}
+    end.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-already_added(Module, #state{handlers = Hs}) ->
-    lists:any(entry_predicate(Module), Hs).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-delete_impl(Subject, State = #state{handlers = Hs}) ->
-    {DeletedHs, NewHs} = lists:partition(entry_predicate(Subject), Hs),
-    [demonitor(Monitor) || {_, {_, Monitor}} <- DeletedHs],
+handle_exit(Module, State = #state{handlers = Hs}) ->
+    Fun = fun({_, #bootstrap_handler{module = M}}) -> M =:= Module end,
+    {DelHs, NewHs} = lists:partition(Fun, Hs),
+    [demonitor(Ref) || {Ref, _} <- DelHs],
     State#state{handlers = NewHs}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-update_impl(Updates, State = #state{handlers = Hs}) ->
-    Fun = fun({{M, S}, R}) -> {{M, proplists:get_value(M, Updates, S)}, R} end,
-    State#state{handlers = lists:map(Fun, Hs)}.
+handle_down(Ref, State = #state{handlers = Hs}) ->
+    {DelHs, NewHs} = lists:partition(fun({R, _}) -> R =:= Ref end, Hs),
+    [bootstrap_event:delete(H#bootstrap_handler.module) || {_, H} <- DelHs],
+    State#state{handlers = NewHs}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-entry_predicate(Module) when is_atom(Module) ->
-    fun({{M, _}, _}) -> M =:= Module end;
-entry_predicate(Pid) when is_pid(Pid) ->
-    fun({_, {P, _}}) -> P =:= Pid end.
+handle_nodeup(Node, State) ->
+    case match(Node, State) of
+	true  -> bootstrap_event:on_connected(Node);
+	false -> ok
+    end,
+    State.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+handle_nodedown(Node, Reason, State) ->
+    case match(Node, State) of
+	true  -> bootstrap_event:on_disconnected(Node, Reason);
+	false -> ok
+    end,
+    State.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+match(_Node, #state{regex = undefined}) ->
+    false;
+match(Node, #state{regex = Regex}) ->
+    re:run(atom_to_list(Node), Regex, [{capture, none}]) =:= match.
