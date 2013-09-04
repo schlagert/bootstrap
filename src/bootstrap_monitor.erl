@@ -64,7 +64,9 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
-    ok = net_kernel:monitor_nodes(true, [nodedown_reason]),
+    Mode = bootstrap:get_env(connect_mode, visible),
+    TypeOpt = {node_type, case Mode of hidden -> all; _ -> Mode end},
+    ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
     case bootstrap:get_env(connect_to, undefined) of
 	undefined ->
 	    State = #state{regex = undefined};
@@ -97,7 +99,8 @@ handle_info({'DOWN', Ref, process, _, _}, State) ->
     {noreply, handle_down(Ref, State)};
 handle_info({nodeup, Node, _}, State) ->
     {noreply, handle_nodeup(Node, State)};
-handle_info({nodedown, Node, [{nodedown_reason, Reason}]}, State) ->
+handle_info({nodedown, Node, List}, State) ->
+    Reason = proplists:get_value(nodedown_reason, List),
     {noreply, handle_nodedown(Node, Reason, State)};
 handle_info(_Info, State) ->
     {noreply, State}.

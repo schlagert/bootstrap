@@ -110,7 +110,3 @@ on_connected(Node, Pid) ->
 on_disconnected(Node, Reason, Pid) ->
     Pid ! {disconnected, Node, Reason},
     Pid.
-
-%%%=============================================================================
-%%% internal functions
-%%%=============================================================================
