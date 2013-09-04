@@ -14,6 +14,8 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%
 %%% @doc
+%%% A server that monitors bootstrap handler registrations as well as connection
+%%% state to remote nodes.
 %%% @end
 %%%=============================================================================
 -module(bootstrap_monitor).
@@ -40,6 +42,7 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Starts a locally registered generic server.
 %% @end
 %%------------------------------------------------------------------------------
 -spec start_link() -> {ok, pid()} | {error, term()}.
@@ -47,6 +50,10 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Add a bootstrap handler to the {@link bootstrap_event}. If the passed handler
+%% structure contains a process id, it will be monitored and the corresponding
+%% handler will be removed when the process exits. If the given module is
+%% already registered, adding the handler will fail.
 %% @end
 %%------------------------------------------------------------------------------
 -spec add(#bootstrap_handler{}) -> ok | {error, term()}.

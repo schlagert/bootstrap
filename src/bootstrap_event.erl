@@ -14,6 +14,7 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%
 %%% @doc
+%%% A `gen_event' manager and wrapper to distribute node connection messages.
 %%% @end
 %%%=============================================================================
 -module(bootstrap_event).
@@ -98,6 +99,7 @@ list() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Publishes that a node matching the `connect_to' regex connected. 
 %% @end
 %%------------------------------------------------------------------------------
 -spec on_connected(node()) -> ok.
@@ -105,6 +107,7 @@ on_connected(Node) -> gen_event:notify(?MODULE, {connected, Node}).
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Notifies a list of matching, connected nodes to a certain event handler.
 %% @end
 %%------------------------------------------------------------------------------
 -spec on_connected(#bootstrap_handler{}, [node()]) -> ok.
@@ -119,6 +122,7 @@ on_connected(#bootstrap_handler{module = Module}, Nodes) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Publishes that a node matching the `connect_to' regex disconnected. 
 %% @end
 %%------------------------------------------------------------------------------
 -spec on_disconnected(node(), term()) -> ok.
