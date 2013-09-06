@@ -29,4 +29,11 @@
 
 -record(bootstrap_handler, {pid :: pid(), module :: module(), arg :: term()}).
 
+%%%=============================================================================
+%%% Define the application internal bootstrap protocol.
+%%%=============================================================================
+
+-define(BOOTSTRAP_PING(Node, From), {bootstrap, {ping, Node, From}}).
+-define(BOOTSTRAP_PONG(Node),       {bootstrap, {pong, Node}}).
+
 -endif. %% bootstrap_hrl_

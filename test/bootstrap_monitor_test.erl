@@ -38,12 +38,6 @@ add_no_connect_to_regex_test() ->
 
     {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
 
-    MonPid ! {nodeup, node(), [{node_type, visible}]},
-    receive {connected, _} -> throw(test_failed) after 100 -> ok end,
-
-    MonPid ! {nodedown, node(), [{nodedown_reason, reason}]},
-    receive {disconnected, _, _} -> throw(test_failed) after 100 -> ok end,
-
     exit(MonPid, shutdown),
     receive {'EXIT', MonPid, shutdown} -> ok end,
     exit(EvtPid, shutdown),

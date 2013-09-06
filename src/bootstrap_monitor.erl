@@ -64,7 +64,8 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 %%%=============================================================================
 
 -record(state, {
-	  regex         :: re:mp(),
+          mode          :: visible | connected,
+	  pattern       :: re:mp(),
 	  handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
 
 %%------------------------------------------------------------------------------
@@ -72,14 +73,10 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 %%------------------------------------------------------------------------------
 init([]) ->
     Mode = bootstrap:get_env(connect_mode, visible),
-    TypeOpt = {node_type, case Mode of hidden -> all; _ -> Mode end},
+    TypeOpt = {node_type, case Mode of hidden -> all; visible -> Mode end},
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
-    case bootstrap:get_env(connect_to, undefined) of
-	undefined ->
-	    {ok, #state{regex = undefined}};
-	Regex when is_list(Regex) ->
-	    {ok, #state{regex = element(2, {ok, _} = re:compile(Regex))}}
-    end.
+    ModeOpt = case Mode of hidden -> connected; visible -> Mode end,
+    {ok, #state{mode = ModeOpt, pattern = bootstrap:pattern()}}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -127,10 +124,7 @@ terminate(_Reason, _State) -> ok.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-get_nodes(#state{regex = undefined}) ->
-    [node()];
-get_nodes(#state{regex = Regex}) ->
-    [Node || Node <- [node() | nodes()], bootstrap:matches(Node, Regex)].
+matching(#state{pattern = P, mode = M}) -> bootstrap:matching(P, M).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -138,7 +132,7 @@ get_nodes(#state{regex = Regex}) ->
 handle_add(Handler = #bootstrap_handler{pid = undefined}, State) ->
     case bootstrap_event:add(Handler) of
 	ok ->
-	    bootstrap_event:on_connected(Handler, get_nodes(State)),
+	    bootstrap_event:on_connected(Handler, matching(State)),
 	    {ok, State};
 	Reason ->
 	    {{error, Reason}, State}
@@ -146,7 +140,7 @@ handle_add(Handler = #bootstrap_handler{pid = undefined}, State) ->
 handle_add(Handler = #bootstrap_handler{pid = Pid}, State) ->
     case bootstrap_event:add(Handler) of
 	ok ->
-	    bootstrap_event:on_connected(Handler, get_nodes(State)),
+	    bootstrap_event:on_connected(Handler, matching(State)),
 	    Entry = {monitor(process, Pid), Handler},
 	    {ok, State#state{handlers = [Entry | State#state.handlers]}};
 	Reason ->
@@ -173,8 +167,8 @@ handle_down(Ref, State = #state{handlers = Hs}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_nodeup(Node, State = #state{regex = Regex}) ->
-    case bootstrap:matches(Node, Regex) of
+handle_nodeup(Node, State = #state{pattern = Pattern}) ->
+    case bootstrap:matches(Node, Pattern) of
 	true  -> bootstrap_event:on_connected(Node);
 	false -> ok
     end,
@@ -183,8 +177,8 @@ handle_nodeup(Node, State = #state{regex = Regex}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_nodedown(Node, Reason, State = #state{regex = Regex}) ->
-    case bootstrap:matches(Node, Regex) of
+handle_nodedown(Node, Reason, State = #state{pattern = Pattern}) ->
+    case bootstrap:matches(Node, Pattern) of
 	true  -> bootstrap_event:on_disconnected(Node, Reason);
 	false -> ok
     end,

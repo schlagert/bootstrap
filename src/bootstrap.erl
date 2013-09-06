@@ -37,7 +37,9 @@
 %% Internal API
 -export([set_env/2,
 	 get_env/2,
-         matches/2]).
+         matches/2,
+         pattern/0,
+         matching/2]).
 
 %% Application callbacks
 -export([start/2,
@@ -141,11 +143,22 @@ get_env(Key, Default) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
--spec matches(node(), re:mp() | undefined) -> boolean().
-matches(_Node, undefined) ->
-    false;
-matches(Node, MatchPattern) ->
-    re:run(atom_to_list(Node), MatchPattern, [{capture, none}]) =:= match.
+-spec matches(node(), re:mp()) -> boolean().
+matches(Node, Pattern) ->
+    re:run(atom_to_list(Node), Pattern, [{capture, none}]) =:= match.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec pattern() -> re:mp().
+pattern() -> element(2, {ok, _} = re:compile(get_env(connect_to, ".*"))).
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec matching(re:mp(), visible | connected) -> [node()].
+matching(Pattern, Mode) ->
+    [Node || Node <- [node() | nodes(Mode)], matches(Node, Pattern)].
 
 %%%=============================================================================
 %%% Application callbacks
@@ -177,8 +190,10 @@ stop(_State) -> ok.
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
-    Specs = [event_mgr(bootstrap_event), server(bootstrap_monitor)],
-    {ok, {{one_for_one, 5, 10}, Specs}}.
+    {ok, {{one_for_one, 5, 10},
+          [event_mgr(bootstrap_event),
+           server(bootstrap_monitor),
+           server(bootstrap_protocol)]}}.
 
 %%%=============================================================================
 %%% internal functions
