@@ -36,7 +36,8 @@
 
 %% Internal API
 -export([set_env/2,
-	 get_env/2]).
+	 get_env/2,
+         matches/2]).
 
 %% Application callbacks
 -export([start/2,
@@ -136,6 +137,15 @@ get_env(Key, Default) ->
         {ok, Value} -> Value;
         _           -> Default
     end.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec matches(node(), re:mp() | undefined) -> boolean().
+matches(_Node, undefined) ->
+    false;
+matches(Node, MatchPattern) ->
+    re:run(atom_to_list(Node), MatchPattern, [{capture, none}]) =:= match.
 
 %%%=============================================================================
 %%% Application callbacks

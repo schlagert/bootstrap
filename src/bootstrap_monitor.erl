@@ -76,12 +76,10 @@ init([]) ->
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
     case bootstrap:get_env(connect_to, undefined) of
 	undefined ->
-	    State = #state{regex = undefined};
+	    {ok, #state{regex = undefined}};
 	Regex when is_list(Regex) ->
-	    {ok, Compiled} = re:compile(Regex),
-	    State = #state{regex = Compiled}
-    end,
-    {ok, State}.
+	    {ok, #state{regex = element(2, {ok, _} = re:compile(Regex))}}
+    end.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -131,8 +129,8 @@ terminate(_Reason, _State) -> ok.
 %%------------------------------------------------------------------------------
 get_nodes(#state{regex = undefined}) ->
     [node()];
-get_nodes(State) ->
-    [Node || Node <- [node() | nodes()], match(Node, State)].
+get_nodes(#state{regex = Regex}) ->
+    [Node || Node <- [node() | nodes()], bootstrap:matches(Node, Regex)].
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -175,8 +173,8 @@ handle_down(Ref, State = #state{handlers = Hs}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_nodeup(Node, State) ->
-    case match(Node, State) of
+handle_nodeup(Node, State = #state{regex = Regex}) ->
+    case bootstrap:matches(Node, Regex) of
 	true  -> bootstrap_event:on_connected(Node);
 	false -> ok
     end,
@@ -185,17 +183,9 @@ handle_nodeup(Node, State) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_nodedown(Node, Reason, State) ->
-    case match(Node, State) of
+handle_nodedown(Node, Reason, State = #state{regex = Regex}) ->
+    case bootstrap:matches(Node, Regex) of
 	true  -> bootstrap_event:on_disconnected(Node, Reason);
 	false -> ok
     end,
     State.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-match(_Node, #state{regex = undefined}) ->
-    false;
-match(Node, #state{regex = Regex}) ->
-    re:run(atom_to_list(Node), Regex, [{capture, none}]) =:= match.
