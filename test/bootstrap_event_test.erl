@@ -53,7 +53,7 @@ add_delete_test() ->
     [] = bootstrap_event:list(),
 
     ok = bootstrap_event:on_connected(node5),
-    receive Msg -> throw({test_failed, Msg}) after 100 -> ok end,
+    receive {connected, node5} -> throw(test_failed) after 100 -> ok end,
 
     exit(Pid, shutdown),
     receive {'EXIT', Pid, shutdown} -> ok end.
