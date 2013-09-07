@@ -39,7 +39,7 @@
          get_env/2,
          matches/2,
          pattern/0,
-         matching/2]).
+         matching/1]).
 
 %% Application callbacks
 -export([start/2,
@@ -156,9 +156,9 @@ pattern() -> element(2, {ok, _} = re:compile(get_env(connect_regex, ".*"))).
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
--spec matching(re:mp(), visible | connected) -> [node()].
-matching(Pattern, Mode) ->
-    [Node || Node <- [node() | nodes(Mode)], matches(Node, Pattern)].
+-spec matching(re:mp()) -> [node()].
+matching(Pattern) ->
+    [Node || Node <- [node() | nodes(connected)], matches(Node, Pattern)].
 
 %%%=============================================================================
 %%% Application callbacks

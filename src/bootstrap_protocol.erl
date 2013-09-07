@@ -180,8 +180,8 @@ handle_pong(Node, State = #state{mode = Mode, pattern = Pattern}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-maybe_ping(State = #state{skip = Skip, minimum = Min}) ->
-    case Skip orelse length(matching(State)) >= Min of
+maybe_ping(State = #state{pattern = Pattern, skip = Skip, minimum = Min}) ->
+    case Skip orelse length(bootstrap:matching(Pattern)) >= Min of
         true  -> State;
         false -> do_ping(State)
     end.
@@ -198,12 +198,6 @@ do_ping(As, State) ->
     lists:foldl(
       fun(A, S) -> send(A, term_to_binary(?BOOTSTRAP_PING(node(), A)), S) end,
       State, As).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-matching(#state{mode = M, pattern = P}) ->
-    bootstrap:matching(P, case M of hidden -> connected; visible -> M end).
 
 %%------------------------------------------------------------------------------
 %% @private

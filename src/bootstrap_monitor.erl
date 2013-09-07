@@ -64,7 +64,6 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 %%%=============================================================================
 
 -record(state, {
-          mode          :: visible | connected,
           pattern       :: re:mp(),
           handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
 
@@ -75,8 +74,7 @@ init([]) ->
     Mode = bootstrap:get_env(connect_mode, visible),
     TypeOpt = {node_type, case Mode of hidden -> all; visible -> Mode end},
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
-    ModeOpt = case Mode of hidden -> connected; visible -> Mode end,
-    {ok, #state{mode = ModeOpt, pattern = bootstrap:pattern()}}.
+    {ok, #state{pattern = bootstrap:pattern()}}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -124,7 +122,7 @@ terminate(_Reason, _State) -> ok.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-matching(#state{pattern = P, mode = M}) -> bootstrap:matching(P, M).
+matching(#state{pattern = Pattern}) -> bootstrap:matching(Pattern).
 
 %%------------------------------------------------------------------------------
 %% @private
