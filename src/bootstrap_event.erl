@@ -23,14 +23,14 @@
 
 %% Registration API
 -export([start_link/0,
-	 add/1,
-	 delete/1,
-	 list/0]).
+         add/1,
+         delete/1,
+         list/0]).
 
 %% Publishing API
 -export([on_connected/1,
-	 on_connected/2,
-	 on_disconnected/2]).
+         on_connected/2,
+         on_disconnected/2]).
 
 %% gen_event callbacks
 -export([init/1,
@@ -68,10 +68,10 @@ add(Handler = #bootstrap_handler{module = Module}) ->
     add(add_sup_handler, Module, Handler).
 add(Function, Module, Handler) ->
     case lists:member(Module, list()) of
-	false ->
-	    gen_event:Function(?MODULE, ?BOOTSTRAP_HANDLER(Module), Handler);
-	true ->
-	    {already_registered, Module}
+        false ->
+            gen_event:Function(?MODULE, ?BOOTSTRAP_HANDLER(Module), Handler);
+        true ->
+            {already_registered, Module}
     end.
 
 %%------------------------------------------------------------------------------
@@ -115,9 +115,9 @@ on_connected(_Handler, []) ->
     ok;
 on_connected(#bootstrap_handler{module = Module}, Nodes) ->
     spawn(fun() ->
-		  H = ?BOOTSTRAP_HANDLER(Module),
-		  gen_event:call(?MODULE, H, {connected, Nodes}, infinity)
-	  end),
+                  H = ?BOOTSTRAP_HANDLER(Module),
+                  gen_event:call(?MODULE, H, {connected, Nodes}, infinity)
+          end),
     ok.
 
 %%------------------------------------------------------------------------------
@@ -185,7 +185,7 @@ code_change(_OldVsn, Handler, _Extra) -> {ok, Handler}.
 %%------------------------------------------------------------------------------
 publish(Fun, Args, Handler = #bootstrap_handler{module = Module}) ->
     try erlang:apply(Module, Fun, Args ++ [Handler#bootstrap_handler.arg]) of
-	NewArg -> Handler#bootstrap_handler{arg = NewArg}
+        NewArg -> Handler#bootstrap_handler{arg = NewArg}
     catch
-	_:_ -> Handler
+        _:_ -> Handler
     end.

@@ -78,12 +78,12 @@ add_supervised_test() ->
 
     Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
     RegPid = spawn_link(
-	       fun() ->
-		       H = Handler#bootstrap_handler{pid = self()},
-		       bootstrap_event:add(H),
-		       H#bootstrap_handler.arg ! registered,
-		       receive _ -> ok end
-	       end),
+               fun() ->
+                       H = Handler#bootstrap_handler{pid = self()},
+                       bootstrap_event:add(H),
+                       H#bootstrap_handler.arg ! registered,
+                       receive _ -> ok end
+               end),
     receive registered -> ok end,
 
     {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
@@ -96,9 +96,9 @@ add_supervised_test() ->
 
     MonPid ! {nodedown, 'test1@host.domain', [{nodedown_reason, reason}]},
     receive
-	{disconnected, 'test1@host.domain', reason} -> throw(test_failed)
+        {disconnected, 'test1@host.domain', reason} -> throw(test_failed)
     after
-	100 -> ok
+        100 -> ok
     end,
 
     exit(MonPid, shutdown),

@@ -78,12 +78,12 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
 init([]) ->
     process_flag(trap_exit, true),
     State = #state{
-               mode    = bootstrap:get_env(connect_mode, visible),
-               pattern = bootstrap:pattern(),
-               port    = bootstrap:get_env(send_port, 50337),
-               socket  = element(2, {ok, _} = open_socket()),
-               minimum = bootstrap:get_env(min_connections, 2),
-               timeout = bootstrap:get_env(ping_timeout, 10000)},
+      mode    = bootstrap:get_env(connect_mode, visible),
+      pattern = bootstrap:pattern(),
+      port    = bootstrap:get_env(send_port, 50337),
+      socket  = element(2, {ok, _} = open_socket()),
+      minimum = bootstrap:get_env(min_connections, 2),
+      timeout = bootstrap:get_env(ping_timeout, 10000)},
     {ok, timer(0, State)}.
 
 %%------------------------------------------------------------------------------

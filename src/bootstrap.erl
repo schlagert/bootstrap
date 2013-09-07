@@ -30,20 +30,20 @@
 
 %% API
 -export([add_handler/2,
-	 add_sup_handler/2,
-	 delete_handler/1,
-	 handlers/0]).
+         add_sup_handler/2,
+         delete_handler/1,
+         handlers/0]).
 
 %% Internal API
 -export([set_env/2,
-	 get_env/2,
+         get_env/2,
          matches/2,
          pattern/0,
          matching/2]).
 
 %% Application callbacks
 -export([start/2,
-	 stop/1]).
+         stop/1]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -169,12 +169,12 @@ matching(Pattern, Mode) ->
 %%------------------------------------------------------------------------------
 start(_StartType, _StartArgs) ->
     case supervisor:start_link(?MODULE, []) of
-	Result = {ok, _} ->
-	    [bootstrap_monitor:add(H) || H <- get_env(handlers, [])],
-	    ok = set_env(handlers, []),
-	    Result;
-	Result ->
-	    Result
+        Result = {ok, _} ->
+            [bootstrap_monitor:add(H) || H <- get_env(handlers, [])],
+            ok = set_env(handlers, []),
+            Result;
+        Result ->
+            Result
     end.
 
 %%------------------------------------------------------------------------------

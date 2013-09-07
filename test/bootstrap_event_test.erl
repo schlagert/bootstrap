@@ -64,10 +64,10 @@ add_sup_test() ->
 
     Handler = #bootstrap_handler{pid = self(), module = ?MODULE, arg = self()},
     RegPid = spawn_link(fun() ->
-				bootstrap_event:add(Handler),
-				Handler#bootstrap_handler.pid ! registered,
-				receive _ -> ok end
-			end),
+                                bootstrap_event:add(Handler),
+                                Handler#bootstrap_handler.pid ! registered,
+                                receive _ -> ok end
+                        end),
 
     receive registered -> ok end,
     {already_registered, ?MODULE} = bootstrap_event:add(Handler),
@@ -91,9 +91,9 @@ add_sup_test() ->
 
     ok = bootstrap_event:on_connected(node5),
     receive
-	Msg = {connected, node5} -> throw({test_failed, Msg})
+        Msg = {connected, node5} -> throw({test_failed, Msg})
     after 100 ->
-	    ok
+            ok
     end,
 
     exit(Pid, shutdown),

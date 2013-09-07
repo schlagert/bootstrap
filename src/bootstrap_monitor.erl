@@ -24,7 +24,7 @@
 
 %% API
 -export([start_link/0,
-	 add/1]).
+         add/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -65,8 +65,8 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 
 -record(state, {
           mode          :: visible | connected,
-	  pattern       :: re:mp(),
-	  handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
+          pattern       :: re:mp(),
+          handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -131,20 +131,20 @@ matching(#state{pattern = P, mode = M}) -> bootstrap:matching(P, M).
 %%------------------------------------------------------------------------------
 handle_add(Handler = #bootstrap_handler{pid = undefined}, State) ->
     case bootstrap_event:add(Handler) of
-	ok ->
-	    bootstrap_event:on_connected(Handler, matching(State)),
-	    {ok, State};
-	Reason ->
-	    {{error, Reason}, State}
+        ok ->
+            bootstrap_event:on_connected(Handler, matching(State)),
+            {ok, State};
+        Reason ->
+            {{error, Reason}, State}
     end;
 handle_add(Handler = #bootstrap_handler{pid = Pid}, State) ->
     case bootstrap_event:add(Handler) of
-	ok ->
-	    bootstrap_event:on_connected(Handler, matching(State)),
-	    Entry = {monitor(process, Pid), Handler},
-	    {ok, State#state{handlers = [Entry | State#state.handlers]}};
-	Reason ->
-	    {{error, Reason}, State}
+        ok ->
+            bootstrap_event:on_connected(Handler, matching(State)),
+            Entry = {monitor(process, Pid), Handler},
+            {ok, State#state{handlers = [Entry | State#state.handlers]}};
+        Reason ->
+            {{error, Reason}, State}
     end.
 
 %%------------------------------------------------------------------------------
@@ -169,8 +169,8 @@ handle_down(Ref, State = #state{handlers = Hs}) ->
 %%------------------------------------------------------------------------------
 handle_nodeup(Node, State = #state{pattern = Pattern}) ->
     case bootstrap:matches(Node, Pattern) of
-	true  -> bootstrap_event:on_connected(Node);
-	false -> ok
+        true  -> bootstrap_event:on_connected(Node);
+        false -> ok
     end,
     State.
 
@@ -179,7 +179,7 @@ handle_nodeup(Node, State = #state{pattern = Pattern}) ->
 %%------------------------------------------------------------------------------
 handle_nodedown(Node, Reason, State = #state{pattern = Pattern}) ->
     case bootstrap:matches(Node, Pattern) of
-	true  -> bootstrap_event:on_disconnected(Node, Reason);
-	false -> ok
+        true  -> bootstrap_event:on_disconnected(Node, Reason);
+        false -> ok
     end,
     State.
