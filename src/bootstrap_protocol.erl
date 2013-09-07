@@ -136,7 +136,7 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 %%------------------------------------------------------------------------------
 open_socket() ->
     Port = bootstrap:get_env(send_port, 50337),
-    Ports = bootstrap:get_env(listen_ports, [50338, 50339]),
+    Ports = bootstrap:get_env(secondary_ports, [50338, 50339]),
     lists:foldl(fun try_open/2, {error, no_ports}, [Port | Ports]).
 
 %%------------------------------------------------------------------------------
