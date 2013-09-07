@@ -80,7 +80,7 @@ init([]) ->
     State = #state{
       mode    = bootstrap:get_env(connect_mode, visible),
       pattern = bootstrap:pattern(),
-      port    = bootstrap:get_env(send_port, 50337),
+      port    = bootstrap:get_env(primary_port, 50337),
       socket  = element(2, {ok, _} = open_socket()),
       minimum = bootstrap:get_env(min_connections, 2),
       timeout = bootstrap:get_env(ping_timeout, 10000)},
@@ -135,7 +135,7 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 %% @private
 %%------------------------------------------------------------------------------
 open_socket() ->
-    Port = bootstrap:get_env(send_port, 50337),
+    Port = bootstrap:get_env(primary_port, 50337),
     Ports = bootstrap:get_env(secondary_ports, [50338, 50339]),
     lists:foldl(fun try_open/2, {error, no_ports}, [Port | Ports]).
 
