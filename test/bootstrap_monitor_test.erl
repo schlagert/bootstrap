@@ -27,7 +27,7 @@
 %%% TESTS
 %%%=============================================================================
 
-add_no_connect_to_regex_test() ->
+add_no_connect_regex_test() ->
     process_flag(trap_exit, true),
     {ok, EvtPid} = bootstrap_event:start_link(),
     {ok, MonPid} = bootstrap_monitor:start_link(),
@@ -43,10 +43,10 @@ add_no_connect_to_regex_test() ->
     exit(EvtPid, shutdown),
     receive {'EXIT', EvtPid, shutdown} -> ok end.
 
-add_with_connect_to_regex_test() ->
+add_with_connect_regex_test() ->
     process_flag(trap_exit, true),
 
-    ok = bootstrap:set_env(connect_to, "test.*@.*"),
+    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
 
     {ok, EvtPid} = bootstrap_event:start_link(),
     {ok, MonPid} = bootstrap_monitor:start_link(),
@@ -71,7 +71,7 @@ add_with_connect_to_regex_test() ->
 add_supervised_test() ->
     process_flag(trap_exit, true),
 
-    ok = bootstrap:set_env(connect_to, "test.*@.*"),
+    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
 
     {ok, EvtPid} = bootstrap_event:start_link(),
     {ok, MonPid} = bootstrap_monitor:start_link(),

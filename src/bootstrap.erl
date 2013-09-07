@@ -59,14 +59,14 @@
 %%%=============================================================================
 
 -callback on_connected(node(), arg()) -> arg().
-%% Called whenever a connection to a node matching the `connect_to' regex has
-%% been established. This may occur multiple times. The returned term will be
-%% the new handler state. Exceptions thrown by this function will be discarded.
+%% Called whenever a connection to a node matching the `connect_regex' has been
+%% established. This may occur multiple times. The returned term will be the
+% new handler state. Exceptions thrown by this function will be discarded.
 
 -callback on_disconnected(node(), Reason :: term(), arg()) -> arg().
-%% Called whenever a connection to a node matching the `connect_to' regex has
-%% been lost. This may also occur multiple times. The returned term will be the
-%% new handler state. Exceptions thrown by this function will be discarded.
+%% Called whenever a connection to a node matching the `connect_regex' has been
+%% lost. This may also occur multiple times. The returned term will be the new
+%% handler state. Exceptions thrown by this function will be discarded.
 
 %%%=============================================================================
 %%% API
@@ -151,7 +151,7 @@ matches(Node, Pattern) ->
 %% @private
 %%------------------------------------------------------------------------------
 -spec pattern() -> re:mp().
-pattern() -> element(2, {ok, _} = re:compile(get_env(connect_to, ".*"))).
+pattern() -> element(2, {ok, _} = re:compile(get_env(connect_regex, ".*"))).
 
 %%------------------------------------------------------------------------------
 %% @private

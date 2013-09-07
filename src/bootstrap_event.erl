@@ -99,7 +99,7 @@ list() ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Publishes that a node matching the `connect_to' regex connected.
+%% Publishes that a node matching the `connect_regex' connected.
 %% @end
 %%------------------------------------------------------------------------------
 -spec on_connected(node()) -> ok.
@@ -122,7 +122,7 @@ on_connected(#bootstrap_handler{module = Module}, Nodes) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Publishes that a node matching the `connect_to' regex disconnected.
+%% Publishes that a node matching the `connect_regex' disconnected.
 %% @end
 %%------------------------------------------------------------------------------
 -spec on_disconnected(node(), term()) -> ok.
