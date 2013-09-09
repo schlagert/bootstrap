@@ -40,15 +40,16 @@
 %% starts the needed application. All node actions will be logging to stdout.
 %% @end
 %%------------------------------------------------------------------------------
-main([NodeName]) ->
-    main([NodeName, ".*"]);
-main([NodeName, Regex]) ->
-    main([NodeName, Regex, "visible"]);
-main([NodeName, Regex, Mode]) ->
-    main([NodeName, Regex, Mode, "broadcast"]);
-main([NodeName, Regex, Mode, Protocol]) ->
+main([NodeName, Cookie]) ->
+    main([NodeName, Cookie, ".*"]);
+main([NodeName, Cookie, Regex]) ->
+    main([NodeName, Cookie, Regex, "visible"]);
+main([NodeName, Cookie, Regex, Mode]) ->
+    main([NodeName, Cookie, Regex, Mode, "broadcast"]);
+main([NodeName, Cookie, Regex, Mode, Protocol]) ->
     ?LOG("Starting net_kernel with name ~s~n", [NodeName]),
     {ok, _} = net_kernel:start([list_to_atom(NodeName), longnames]),
+    true = erlang:set_cookie(node(), list_to_atom(Cookie)),
     true = code:add_path(get_ebin_dir(element(2, {ok, _} = file:get_cwd()))),
     application:load(sasl),
     ok = application:set_env(sasl, sasl_error_logger, false),
@@ -64,9 +65,13 @@ main([NodeName, Regex, Mode, Protocol]) ->
 main(_) ->
     io:format(
       "~nA script to demonstrate the bootstrap application.~n~n"
-      "Usage:  ~s NodeName [ConnectRegex] [hidden|visible] [broadcast|multicast]~n"
-      "     with NodeName     - A name suitable for long names mode.~n"
-      "          ConnectRegex - A regex string for nodes to connect to.~n~n",
+      "Usage:  ~s NodeName Cookie [ConnectRegex] [ConnnectMode] [Protocol]~n"
+      "     with NodeName     - a name suitable for long names mode~n"
+      "          Cookie       - the nodes magic cookie~n"
+      "          ConnectRegex - regex string for nodes to connect to~n"
+      "          ConnectMode  - type of node connections (hidden or visible)~n"
+      "          Protocol     - network protocol to use (broadcast or  multicast)~n"
+      "~n",
       [escript:script_name()]).
 
 %%%=============================================================================
