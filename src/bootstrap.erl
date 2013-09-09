@@ -32,14 +32,16 @@
 -export([add_handler/2,
          add_sup_handler/2,
          delete_handler/1,
-         handlers/0]).
+         handlers/0,
+         info/0]).
 
 %% Internal API
 -export([set_env/2,
          get_env/2,
          matches/2,
          pattern/0,
-         matching/1]).
+         matching/1,
+         get_info/0]).
 
 %% Application callbacks
 -export([start/2,
@@ -120,6 +122,23 @@ delete_handler(Module) ->
 -spec handlers() -> [module()].
 handlers() -> bootstrap_event:list().
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% Print information about the bootstrap instances on all connected nodes.
+%% @end
+%%------------------------------------------------------------------------------
+-spec info() -> ok.
+info() ->
+    {Rs, _} = rpc:multicall([node() | nodes(connected)], ?MODULE, get_info, []),
+    [info(N, Cs, Hs) || {ok, N, Cs, Hs} <- Rs],
+    ok.
+info(Node, Connections, Handlers) ->
+    io:format(
+      "~s:~n"
+      "  Connections: ~w~n"
+      "  Handlers:    ~w~n",
+      [Node, Connections, Handlers]).
+
 %%%=============================================================================
 %%% Internal API
 %%%=============================================================================
@@ -159,6 +178,12 @@ pattern() -> element(2, {ok, _} = re:compile(get_env(connect_regex, ".*"))).
 -spec matching(re:mp()) -> [node()].
 matching(Pattern) ->
     [Node || Node <- [node() | nodes(connected)], matches(Node, Pattern)].
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+-spec get_info() -> {ok, node(), [node()], [module()]}.
+get_info() -> {ok, node(), matching(pattern()), handlers()}.
 
 %%%=============================================================================
 %%% Application callbacks

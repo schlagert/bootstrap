@@ -28,7 +28,7 @@
 %% bootstrap callbacks
 -export([on_connected/2, on_disconnected/3]).
 
--define(LOG(Fmt, Args), error_logger:info_msg(Fmt, Args)).
+-define(LOG(Fmt, Args), io:format(Fmt, Args)).
 
 %%%=============================================================================
 %%% API
@@ -48,12 +48,14 @@ main([NodeName, Regex, Mode]) ->
     ?LOG("Starting net_kernel with name ~s~n", [NodeName]),
     {ok, _} = net_kernel:start([list_to_atom(NodeName), longnames]),
     true = code:add_path(get_ebin_dir(element(2, {ok, _} = file:get_cwd()))),
+    application:load(sasl),
+    ok = application:set_env(sasl, sasl_error_logger, false),
     application:start(sasl),
     application:start(crypto),
-    application:load(bootstrap),
+    ok = application:load(bootstrap),
     ok = bootstrap:set_env(connect_regex, Regex),
     ok = bootstrap:set_env(connect_mode, list_to_existing_atom(Mode)),
-    application:start(bootstrap),
+    ok = application:start(bootstrap),
     ok = bootstrap:add_sup_handler(?MODULE, self()),
     main_loop();
 main(_) ->
@@ -96,6 +98,9 @@ main_loop() ->
         {disconnected, Node, Reason} ->
             ?LOG("Node ~s disconnected with reason ~p.~n", [Node, Reason])
     end,
+    io:format("~n~.80c~n", [$=]),
+    bootstrap:info(),
+    io:format("~.80c~n~n", [$=]),
     main_loop().
 
 %%------------------------------------------------------------------------------
