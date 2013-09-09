@@ -90,6 +90,9 @@ environment:
   the TTL to `1` all multicast packets are limited to the local network. Default
   is `1`.
 
+The default configuration can be used to form an unbounded, mesh-connected
+Erlang cluster utilizing the UDP broadcast protocol.
+
 Behaviour
 ---------
 
