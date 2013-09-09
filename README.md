@@ -10,7 +10,11 @@ TODO
 Features
 --------
 
-TODO
+* Automatically discover and connect to nodes in an Erlang cluster.
+* Utilize UDP broadcast or multicast for node discovery.
+* Suppport multiple nodes per host.
+* Support creation of complex topologies using `hidden` connections.
+* Provide node connection/disconnection notification system.
 
 How it works
 ------------
@@ -20,7 +24,7 @@ TODO
 Configuration
 -------------
 
-The `bootstrap` application already comes with sensible defaults (except for
+The `bootstrap` application already comes with sensible defaults (except for the
 regex used to decide whether to connect to a certain node or not). However,
 many things can be customized if desired. For this purpose the following
 configuration options are available and can be configured in the application
@@ -110,6 +114,13 @@ History
 -------
 
 ### Version 0.0.1
+
+* Regular expression based node matching
+* UDP broadcast support
+* UDP multicast support
+* Multi-node-per-host support
+* Avoid duplicate broadcasts to minimize network usage
+* Behaviour-based notification system
 
 Examples
 --------
