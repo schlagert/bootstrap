@@ -93,8 +93,8 @@ environment:
 The default configuration can be used to form an unbounded, mesh-connected
 Erlang cluster utilizing the UDP broadcast protocol.
 
-Behaviour
----------
+Notifications
+-------------
 
 If the you use `bootstrap` to automatically establish connections between nodes,
 starting the application on all nodes is basically all you need. However, some
@@ -113,6 +113,21 @@ exits. No messages will be sent to the calling process.
 
 For more information, please refer to the `edoc` of the `bootstrap` module.
 
+Examples
+--------
+
+### Mesh Topology (`visible` connections)
+
+TODO
+
+### Tree Topology (`visible` connections)
+
+TODO
+
+### Tree Topology (`hidden` connections)
+
+TODO
+
 History
 -------
 
@@ -124,8 +139,3 @@ History
 * Multi-node-per-host support
 * Avoid duplicate broadcasts to minimize network usage
 * Behaviour-based notification system
-
-Examples
---------
-
-TODO
