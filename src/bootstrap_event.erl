@@ -187,5 +187,8 @@ publish(Fun, Args, Handler = #bootstrap_handler{module = Module}) ->
     try erlang:apply(Module, Fun, Args ++ [Handler#bootstrap_handler.arg]) of
         NewArg -> Handler#bootstrap_handler{arg = NewArg}
     catch
-        _:_ -> Handler
+        C:E ->
+            ?ERR("Caught {~w,~w} for handler ~s (~p)~n",
+                 [C, E, Module, erlang:get_stacktrace()]),
+            Handler
     end.

@@ -17,6 +17,8 @@
 -ifndef(bootstrap_hrl_).
 -define(bootstrap_hrl_, 1).
 
+-define(ERR(Fmt, Args), error_logger:error_msg(Fmt, Args)).
+
 %%%=============================================================================
 %%% Define the application internal bootstrap event handler {Module, Id}.
 %%%=============================================================================

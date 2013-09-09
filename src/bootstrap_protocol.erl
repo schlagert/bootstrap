@@ -52,7 +52,6 @@
 -else.
 -define(DBG(Fmt, Args), Fmt = Fmt, Args = Args, ok).
 -endif.
--define(ERR(Fmt, Args), error_logger:error_msg(Fmt, Args)).
 
 %%%=============================================================================
 %%% Behaviour
