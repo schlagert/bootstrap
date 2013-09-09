@@ -61,7 +61,7 @@
 -callback on_connected(node(), arg()) -> arg().
 %% Called whenever a connection to a node matching the `connect_regex' has been
 %% established. This may occur multiple times. The returned term will be the
-% new handler state. Exceptions thrown by this function will be discarded.
+%% new handler state. Exceptions thrown by this function will be discarded.
 
 -callback on_disconnected(node(), Reason :: term(), arg()) -> arg().
 %% Called whenever a connection to a node matching the `connect_regex' has been
