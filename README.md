@@ -1,12 +1,21 @@
 bootstrap
 =========
 
+TODO
+
 * [Code](http://github.com/schlagert/bootstrap)
 * [EDoc](http://schlagert.github.com/bootstrap)
 * [![Build Status](https://travis-ci.org/schlagert/bootstrap.png?branch=master)](https://travis-ci.org/schlagert/bootstrap)
 
 Features
 --------
+
+TODO
+
+How it works
+------------
+
+TODO
 
 Configuration
 -------------
@@ -80,15 +89,29 @@ environment:
 Behaviour
 ---------
 
+If the you use `bootstrap` to automatically establish connections between nodes,
+starting the application on all nodes is basically all you need. However, some
+use cases may make it necessary to get notified whenever a __matching__
+connection is established or lost.
+
+For this prupose the `bootstrap` application provides the `bootstrap` behaviour.
+To get notifications about node actions the two functions `on_connected/2` and
+`on_disconnected/3` must be implemented. The implementing handler can the be
+managed using the functions provided in the `bootstrap` module. If you already
+know the `gen_event` behaviour, this will be nothing new for you. All functions
+except for `add_sup_handler/2` basically do the same as the gen_event
+equivalents. The only difference between `add_handler/2` and `add_sup_handler/2`
+is that the added handler will automatically be removed when the calling process
+exits. No messages will be sent to the calling process.
+
+For more information, please refer to the `edoc` of the `bootstrap` module.
+
 History
 -------
 
 ### Version 0.0.1
 
-Supervision
------------
+Examples
+--------
 
-<img src="http://schlagert.github.com/bootstrap/bootstrap.svg" alt="bootstrap supervision" />
-
-For the curious; the above illustration shows the very simple supervision
-hierarchy used by the `bootstrap` application.
+TODO
