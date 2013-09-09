@@ -26,6 +26,8 @@
 %%%   the answering node. It is issued to the port the request was sent from.
 %%%
 %%% To learn more on how discovery works, refer to the project's `README' file.
+%%% @see bootstrap_broadcast
+%%% @see bootstrap_multicast
 %%% @end
 %%%=============================================================================
 -module(bootstrap_protocol).
@@ -45,7 +47,27 @@
 
 -include("bootstrap.hrl").
 
--define(LOG(Fmt, Args), error_logger:info_msg(Fmt, Args)).
+-ifdef(DEBUG).
+-define(DBG(Fmt, Args), error_logger:info_msg(Fmt, Args)).
+-else.
+-define(DBG(Fmt, Args), Fmt = Fmt, Args = Args, ok).
+-endif.
+-define(ERR(Fmt, Args), error_logger:error_msg(Fmt, Args)).
+
+%%%=============================================================================
+%%% Behaviour
+%%%=============================================================================
+
+-callback options() -> [gen_udp:option()].
+%% Called when the protocol socket gets initialized. The returned options will
+%% be appended to the common options. E.g. for a broadcast UDP implementation,
+%% the returned options should turn on broadcast support on a socket.
+
+-callback addresses() -> [inet:ip4_address()].
+%% Must return a list of addresses ping packets will be sent to. E.g. for a
+%% broadcast implementation, this should return a list of IPv4 broadcast
+%% addresses. This will be called frequently, whenever a node decides to ping
+%% for other nodes.
 
 %%%=============================================================================
 %%% API
@@ -64,27 +86,29 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
 %%%=============================================================================
 
 -record(state, {
-          mode    :: visible | hidden,
-          pattern :: re:mp(),
-          port    :: inet:port_number(),
-          socket  :: inet:socket(),
-          skip    :: boolean(),
-          minimum :: non_neg_integer(),
-          timeout :: non_neg_integer()}).
+          mode     :: visible | hidden,
+          pattern  :: re:mp(),
+          protocol :: module(),
+          port     :: inet:port_number(),
+          socket   :: inet:socket(),
+          skip     :: boolean(),
+          minimum  :: non_neg_integer(),
+          timeout  :: non_neg_integer()}).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
-    State = #state{
-      mode    = bootstrap:get_env(connect_mode, visible),
-      pattern = bootstrap:pattern(),
-      port    = bootstrap:get_env(primary_port, 50337),
-      socket  = element(2, {ok, _} = open_socket()),
-      minimum = bootstrap:get_env(min_connections, 2),
-      timeout = bootstrap:get_env(ping_timeout, 10000)},
-    {ok, timer(0, State)}.
+    {ok, timer_rand(
+           #state{
+              mode     = bootstrap:get_env(connect_mode, visible),
+              pattern  = bootstrap:pattern(),
+              protocol = to_mod(bootstrap:get_env(protocol, broadcast)),
+              port     = bootstrap:get_env(primary_port, 50337),
+              socket   = element(2, {ok, _} = open_socket()),
+              minimum  = bootstrap:get_env(min_connections, infinity),
+              timeout  = bootstrap:get_env(ping_timeout, 10000)})}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -99,13 +123,17 @@ handle_cast(_Request, State) -> {noreply, State}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_info({udp, S, _, Port, Data}, State = #state{socket = S}) ->
-    try binary_to_term(Data) of
-        ?BOOTSTRAP_PING(Node, From) when Node =/= node() ->
+handle_info({udp, S, IP, Port, Data}, State = #state{socket = S}) ->
+    try {IP, binary_to_term(Data)} of
+        {_, ?BOOTSTRAP_PING(Node, From)} when Node =/= node() ->
+            ?DBG("Got PING from ~s with source port ~w.", [Node, Port]),
             {noreply, handle_ping(From, Port, State)};
-        ?BOOTSTRAP_PONG(Node) when Node =/= node() ->
+        {_, ?BOOTSTRAP_PONG(Node)} when Node =/= node() ->
+            ?DBG("Got PONG from ~s with source port ~w.", [Node, Port]),
             {noreply, handle_pong(Node, State)};
-        _ ->
+        {{I1, I2, I3, I4}, Msg} ->
+            ?DBG("Ignoring ~w from ~w.~w.~w.~w:~w.",
+                 [Msg, I1, I2, I3, I4, Port]),
             {noreply, State}
     catch
         _:_ -> {noreply, State}
@@ -113,7 +141,7 @@ handle_info({udp, S, _, Port, Data}, State = #state{socket = S}) ->
 handle_info({udp_closed, S}, State = #state{socket = S}) ->
     {stop, udp_closed, State};
 handle_info(ping_timeout, State) ->
-    {noreply, timer(maybe_ping(State))};
+    {noreply, timer_fixed(maybe_ping(State))};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -137,29 +165,41 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 open_socket() ->
     Port = bootstrap:get_env(primary_port, 50337),
     Ports = bootstrap:get_env(secondary_ports, [50338, 50339]),
-    lists:foldl(fun try_open/2, {error, no_ports}, [Port | Ports]).
+    ProtocolModule = to_mod(bootstrap:get_env(protocol, broadcast)),
+    PortList = [{ProtocolModule, P} || P <- [Port | Ports]],
+    lists:foldl(fun try_open/2, {error, no_ports}, PortList).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-try_open(_, {ok, Socket}) -> {ok, Socket};
-try_open(Port, _)         -> gen_udp:open(Port, [binary, {broadcast, true}]).
+try_open(_, {ok, Socket}) ->
+    {ok, Socket};
+try_open({ProtocolModule, Port}, _) ->
+    gen_udp:open(Port, [binary | ProtocolModule:options()]).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-timer(State = #state{timeout = Timeout}) ->
+to_mod(broadcast) -> bootstrap_broadcast;
+to_mod(multicast) -> bootstrap_multicast.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+timer_fixed(State = #state{timeout = Timeout}) ->
     timer(Timeout, State).
+timer_rand(State = #state{timeout = Timeout}) ->
+    timer((Timeout div 2) + crypto:rand_uniform(0, (Timeout div 2)), State).
 timer(Timeout, State) ->
-    Rand = crypto:rand_uniform(1000, 2000),
-    erlang:send_after(Timeout + Rand, self(), ping_timeout),
+    erlang:send_after(Timeout, self(), ping_timeout),
     State#state{skip = false}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_ping(Addr, Port, State = #state{port = P}) ->
+handle_ping(Addr = {I1, I2, I3, I4}, Port, State = #state{port = P}) ->
     NewState = send(Addr, Port, term_to_binary(?BOOTSTRAP_PONG(node())), State),
+    ?DBG("Sent PONG to ~w.~w.~w.~w:~w.", [I1, I2, I3, I4, Port]),
     case Port of P -> NewState#state{skip = true}; _ -> NewState end.
 
 %%------------------------------------------------------------------------------
@@ -168,51 +208,44 @@ handle_ping(Addr, Port, State = #state{port = P}) ->
 handle_pong(Node, State = #state{mode = Mode, pattern = Pattern}) ->
     case {Mode, bootstrap:matches(Node, Pattern)} of
         {visible, true} -> Result = net_kernel:connect(Node);
-        {hidden, true} -> Result = net_kernel:hidden_connect(Node);
-        {_, false}     -> Result = skipped
+        {hidden, true}  -> Result = net_kernel:hidden_connect(Node);
+        {_, false}      -> Result = skipped
     end,
     case Result of
-        false -> ?LOG("Failed to connect to matching node ~s.", [Node]);
-        _     -> ok
+        false   -> ?ERR("Failed to connect to matching node ~s.", [Node]);
+        true    -> ?DBG("Connected to matching node ~s.", [Node]);
+        skipped -> ok
     end,
     State.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-maybe_ping(State = #state{pattern = Pattern, skip = Skip, minimum = Min}) ->
-    case Skip orelse length(bootstrap:matching(Pattern)) >= Min of
-        true  -> State;
-        false -> do_ping(State)
+maybe_ping(State = #state{pattern = P, skip = S, minimum = M}) ->
+    case S orelse (M /= infinity andalso length(bootstrap:matching(P)) >= M) of
+        false -> do_ping(State);
+        true  -> State
     end.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-do_ping(State) ->
-    do_ping(addresses(), State).
+do_ping(State = #state{protocol = ProtocolModule}) ->
+    do_ping(ProtocolModule:addresses(), State).
 do_ping([], State) ->
-    ?LOG("No network addresses to send to.", []),
+    ?ERR("No network addresses to send to.", []),
     State;
 do_ping(As, State) ->
     lists:foldl(
-      fun(A, S) -> send(A, term_to_binary(?BOOTSTRAP_PING(node(), A)), S) end,
+      fun(A = {I1, I2, I3, I4}, S = #state{port = P}) ->
+              ?DBG("Sent PING to ~w.~w.~w.~w:~w.", [I1, I2, I3, I4, P]),
+              send(A, P, term_to_binary(?BOOTSTRAP_PING(node(), A)), S)
+      end,
       State, As).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-send(Addr, Message, State = #state{port = Port}) ->
-    send(Addr, Port, Message, State).
 send(Addr, Port, Message, State = #state{socket = Socket}) ->
     ok = gen_udp:send(Socket, Addr, Port, Message),
     State.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-addresses() ->
-    [A || {ok, Is} <- [inet:getifaddrs()],
-          {_, L} <- Is,
-          {broadaddr, A = {_, _, _, _}} <- L,
-          lists:member(up, proplists:get_value(flags, L, []))].
