@@ -45,6 +45,8 @@ main([NodeName]) ->
 main([NodeName, Regex]) ->
     main([NodeName, Regex, "visible"]);
 main([NodeName, Regex, Mode]) ->
+    main([NodeName, Regex, Mode, "broadcast"]);
+main([NodeName, Regex, Mode, Protocol]) ->
     ?LOG("Starting net_kernel with name ~s~n", [NodeName]),
     {ok, _} = net_kernel:start([list_to_atom(NodeName), longnames]),
     true = code:add_path(get_ebin_dir(element(2, {ok, _} = file:get_cwd()))),
@@ -55,13 +57,14 @@ main([NodeName, Regex, Mode]) ->
     ok = application:load(bootstrap),
     ok = bootstrap:set_env(connect_regex, Regex),
     ok = bootstrap:set_env(connect_mode, list_to_existing_atom(Mode)),
+    ok = bootstrap:set_env(protocol, list_to_existing_atom(Protocol)),
     ok = application:start(bootstrap),
     ok = bootstrap:add_sup_handler(?MODULE, self()),
     main_loop();
 main(_) ->
     io:format(
       "~nA script to demonstrate the bootstrap application.~n~n"
-      "Usage:  ~s NodeName [ConnectRegex] [hidden|visible]~n"
+      "Usage:  ~s NodeName [ConnectRegex] [hidden|visible] [broadcast|multicast]~n"
       "     with NodeName     - A name suitable for long names mode.~n"
       "          ConnectRegex - A regex string for nodes to connect to.~n~n",
       [escript:script_name()]).
