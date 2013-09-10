@@ -1,7 +1,10 @@
 bootstrap
 =========
 
-TODO
+The `bootstrap` application is a simple, yet poweful application to bootstrap an
+Erlang cluster without having to know the exact nodenames or hostnames in
+advance. It automates the process of dynamically populating the cluster with new
+nodes.
 
 * [Code](http://github.com/schlagert/bootstrap)
 * [EDoc](http://schlagert.github.com/bootstrap)
@@ -97,9 +100,9 @@ Notifications
 -------------
 
 If the you use `bootstrap` to automatically establish connections between nodes,
-starting the application on all nodes is basically all you need. However, some
-use cases may make it necessary to get notified whenever a __matching__
-connection is established or lost.
+configuring and starting the application on all nodes is basically all you need.
+However, some use cases may make it necessary to get notified whenever a
+__matching__ connection is established or lost.
 
 For this purpose the `bootstrap` application provides the `bootstrap` behaviour.
 To get notifications about node actions the two functions `on_connected/2` and
@@ -111,7 +114,7 @@ equivalents. The only difference between `add_handler/2` and `add_sup_handler/2`
 is that the added handler will automatically be removed when the calling process
 exits. No messages will be sent to the calling process.
 
-`bootstrap` handlers will get initial notifications for all _matching_ nodes
+`bootstrap` handlers will get initial notifications for all __matching__ nodes
 that are currently connected.
 
 For more information, please refer to the `edoc` of the `bootstrap` module.
@@ -119,15 +122,21 @@ For more information, please refer to the `edoc` of the `bootstrap` module.
 Examples
 --------
 
-### Mesh Topology (`visible` connections)
+### Mesh Topology
+
+`visible` connections
 
 TODO
 
-### Tree Topology (`visible` connections)
+### Tree Topology 1
+
+`visible` connections
 
 TODO
 
-### Tree Topology (`hidden` connections)
+### Tree Topology 2
+
+`hidden` connections
 
 TODO
 

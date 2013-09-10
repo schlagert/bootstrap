@@ -129,15 +129,12 @@ handlers() -> bootstrap_event:list().
 %%------------------------------------------------------------------------------
 -spec info() -> ok.
 info() ->
-    {Rs, _} = rpc:multicall([node() | nodes(connected)], ?MODULE, get_info, []),
-    [info(N, Cs, Hs) || {ok, N, Cs, Hs} <- Rs],
+    %% TODO this should make use if rpc:multicall/X, but currently there's a
+    %% problem handling java nodes
+    [io:format("~s:~n  Connections: ~w~n  Handlers:    ~w~n", [M, Cs, Hs])
+     || N <- [node() | nodes(connected)],
+        {ok, M, Cs, Hs} <- [rpc:call(N, ?MODULE, get_info, [], 1000)]],
     ok.
-info(Node, Connections, Handlers) ->
-    io:format(
-      "~s:~n"
-      "  Connections: ~w~n"
-      "  Handlers:    ~w~n",
-      [Node, Connections, Handlers]).
 
 %%%=============================================================================
 %%% Internal API
