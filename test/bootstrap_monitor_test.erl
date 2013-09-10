@@ -40,8 +40,8 @@ add_no_connect_regex_test() ->
 
     exit(MonPid, shutdown),
     receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, shutdown),
-    receive {'EXIT', EvtPid, shutdown} -> ok end.
+    exit(EvtPid, kill),
+    receive {'EXIT', EvtPid, killed} -> ok end.
 
 add_with_connect_regex_test() ->
     process_flag(trap_exit, true),
@@ -65,8 +65,8 @@ add_with_connect_regex_test() ->
 
     exit(MonPid, shutdown),
     receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, shutdown),
-    receive {'EXIT', EvtPid, shutdown} -> ok end.
+    exit(EvtPid, kill),
+    receive {'EXIT', EvtPid, killed} -> ok end.
 
 add_supervised_test() ->
     process_flag(trap_exit, true),
@@ -103,8 +103,42 @@ add_supervised_test() ->
 
     exit(MonPid, shutdown),
     receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, shutdown),
-    receive {'EXIT', EvtPid, shutdown} -> ok end.
+    exit(EvtPid, kill),
+    receive {'EXIT', EvtPid, killed} -> ok end.
+
+re_add_test() ->
+    process_flag(trap_exit, true),
+
+    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
+
+    {ok, EvtPid1} = bootstrap_event:start_link(),
+    {ok, MonPid1} = bootstrap_monitor:start_link(),
+
+    Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
+    ok = bootstrap_monitor:add(Handler),
+
+    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
+
+    MonPid1 ! {nodeup, 'test1@host.domain', [{node_type, visible}]},
+    receive {connected, 'test1@host.domain'} -> ok end,
+
+    exit(MonPid1, shutdown),
+    receive {'EXIT', MonPid1, shutdown} -> ok end,
+    exit(EvtPid1, shutdown),
+    receive {'EXIT', EvtPid1, shutdown} -> ok end,
+
+    {ok, EvtPid2} = bootstrap_event:start_link(),
+    {ok, MonPid2} = bootstrap_monitor:start_link(),
+
+    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
+
+    MonPid2 ! {nodedown, 'test1@host.domain', [{nodedown_reason, reason}]},
+    receive {disconnected, 'test1@host.domain', reason} -> ok end,
+
+    exit(MonPid2, shutdown),
+    receive {'EXIT', MonPid2, shutdown} -> ok end,
+    exit(EvtPid2, kill),
+    receive {'EXIT', EvtPid2, killed} -> ok end.
 
 %%%=============================================================================
 %%% test behaviour

@@ -71,16 +71,20 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
+    Hs = bootstrap:get_env(handlers, []),
+    ok = bootstrap:set_env(handlers, []),
     Mode = bootstrap:get_env(connect_mode, visible),
     TypeOpt = {node_type, case Mode of hidden -> all; visible -> Mode end},
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
-    {ok, #state{pattern = bootstrap:pattern()}}.
+    {ok, lists:foldl(
+           fun(H, S) -> element(2, handle_add(false, H, S)) end,
+           #state{pattern = bootstrap:pattern()}, Hs)}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
 handle_call({add, Entry}, _From, State) ->
-    {Reply, NewState} = handle_add(Entry, State),
+    {Reply, NewState} = handle_add(true, Entry, State),
     {reply, Reply, NewState};
 handle_call(_Request, _From, State) ->
     {reply, undef, State}.
@@ -127,23 +131,25 @@ matching(#state{pattern = Pattern}) -> bootstrap:matching(Pattern).
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_add(Handler = #bootstrap_handler{pid = undefined}, State) ->
+handle_add(Report, Handler = #bootstrap_handler{pid = Pid}, State) ->
     case bootstrap_event:add(Handler) of
+        ok when is_pid(Pid) ->
+            NewHs = [{monitor(process, Pid), Handler} | State#state.handlers],
+            {ok, maybe_report(Report, Handler, State#state{handlers = NewHs})};
         ok ->
-            bootstrap_event:on_connected(Handler, matching(State)),
-            {ok, State};
-        Reason ->
-            {{error, Reason}, State}
-    end;
-handle_add(Handler = #bootstrap_handler{pid = Pid}, State) ->
-    case bootstrap_event:add(Handler) of
-        ok ->
-            bootstrap_event:on_connected(Handler, matching(State)),
-            Entry = {monitor(process, Pid), Handler},
-            {ok, State#state{handlers = [Entry | State#state.handlers]}};
+            {ok, maybe_report(Report, Handler, State)};
         Reason ->
             {{error, Reason}, State}
     end.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+maybe_report(true, Handler, State) ->
+    bootstrap_event:on_connected(Handler, matching(State)),
+    State;
+maybe_report(false, _Handler, State) ->
+    State.
 
 %%------------------------------------------------------------------------------
 %% @private

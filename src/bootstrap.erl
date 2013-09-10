@@ -62,13 +62,13 @@
 
 -callback on_connected(node(), arg()) -> arg().
 %% Called whenever a connection to a node matching the `connect_regex' has been
-%% established. This may occur multiple times. The returned term will be the
-%% new handler state. Exceptions thrown by this function will be discarded.
+%% established. The returned term will be the new handler state. Exceptions
+%% thrown by this function will be discarded.
 
 -callback on_disconnected(node(), Reason :: term(), arg()) -> arg().
 %% Called whenever a connection to a node matching the `connect_regex' has been
-%% lost. This may also occur multiple times. The returned term will be the new
-%% handler state. Exceptions thrown by this function will be discarded.
+%% lost. The returned term will be the new handler state. Exceptions thrown by
+%% this function will be discarded.
 
 %%%=============================================================================
 %%% API
@@ -192,15 +192,7 @@ get_info() -> {ok, node(), matching(pattern()), handlers()}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-start(_StartType, _StartArgs) ->
-    case supervisor:start_link(?MODULE, []) of
-        Result = {ok, _} ->
-            [bootstrap_monitor:add(H) || H <- get_env(handlers, [])],
-            ok = set_env(handlers, []),
-            Result;
-        Result ->
-            Result
-    end.
+start(_StartType, _StartArgs) -> supervisor:start_link(?MODULE, []).
 
 %%------------------------------------------------------------------------------
 %% @private
