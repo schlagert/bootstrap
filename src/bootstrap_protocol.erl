@@ -48,7 +48,7 @@
 -include("bootstrap.hrl").
 
 -ifdef(DEBUG).
--define(DBG(Fmt, Args), error_logger:info_msg(Fmt, Args)).
+-define(DBG(Fmt, Args), io:format(Fmt, Args)).
 -else.
 -define(DBG(Fmt, Args), Fmt = Fmt, Args = Args, ok).
 -endif.
@@ -99,7 +99,7 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
 %%------------------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
-    {ok, timer_rand(
+    {ok, timer_initial(
            #state{
               mode     = bootstrap:get_env(connect_mode, visible),
               pattern  = bootstrap:pattern(),
@@ -124,14 +124,18 @@ handle_cast(_Request, State) -> {noreply, State}.
 %%------------------------------------------------------------------------------
 handle_info({udp, S, IP, Port, Data}, State = #state{socket = S}) ->
     try {IP, binary_to_term(Data)} of
-        {_, ?BOOTSTRAP_PING(Node, From)} when Node =/= node() ->
-            ?DBG("Got PING from ~s with source port ~w.", [Node, Port]),
+        {_, ?BOOTSTRAP_PING(Node, _)} when Node == node() ->
+            {noreply, State};
+        {_, ?BOOTSTRAP_PING(Node, From)} ->
+            ?DBG("Got PING from ~s with source port ~w.~n", [Node, Port]),
             {noreply, handle_ping(From, Port, State)};
-        {_, ?BOOTSTRAP_PONG(Node)} when Node =/= node() ->
-            ?DBG("Got PONG from ~s with source port ~w.", [Node, Port]),
+        {_, ?BOOTSTRAP_PONG(Node)} when Node == node() ->
+            {noreply, State};
+        {_, ?BOOTSTRAP_PONG(Node)} ->
+            ?DBG("Got PONG from ~s with source port ~w.~n", [Node, Port]),
             {noreply, handle_pong(Node, State)};
         {{I1, I2, I3, I4}, Msg} ->
-            ?DBG("Ignoring ~w from ~w.~w.~w.~w:~w.",
+            ?DBG("Ignoring ~w from ~w.~w.~w.~w:~w.~n",
                  [Msg, I1, I2, I3, I4, Port]),
             {noreply, State}
     catch
@@ -140,7 +144,7 @@ handle_info({udp, S, IP, Port, Data}, State = #state{socket = S}) ->
 handle_info({udp_closed, S}, State = #state{socket = S}) ->
     {stop, udp_closed, State};
 handle_info(ping_timeout, State) ->
-    {noreply, timer_fixed(maybe_ping(State))};
+    {noreply, timer_periodic(maybe_ping(State))};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -185,10 +189,10 @@ to_mod(multicast) -> bootstrap_multicast.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-timer_fixed(State = #state{timeout = Timeout}) ->
-    timer(Timeout, State).
-timer_rand(State = #state{timeout = Timeout}) ->
-    timer((Timeout div 2) + crypto:rand_uniform(0, (Timeout div 2)), State).
+timer_initial(State = #state{timeout = Timeout}) ->
+    timer(max(1000, Timeout) + (Timeout div 2), State).
+timer_periodic(State = #state{timeout = Timeout}) ->
+    timer(max(1000, Timeout - 1000) + crypto:rand_uniform(0, 1000), State).
 timer(Timeout, State) ->
     erlang:send_after(Timeout, self(), ping_timeout),
     State#state{skip = false}.
@@ -196,10 +200,13 @@ timer(Timeout, State) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_ping(Addr = {I1, I2, I3, I4}, Port, State = #state{port = P}) ->
-    NewState = send(Addr, Port, term_to_binary(?BOOTSTRAP_PONG(node())), State),
-    ?DBG("Sent PONG to ~w.~w.~w.~w:~w.", [I1, I2, I3, I4, Port]),
-    case Port of P -> NewState#state{skip = true}; _ -> NewState end.
+handle_ping(Addr = {I1, I2, I3, I4}, InPort, State = #state{socket = Socket}) ->
+    [begin
+         Msg = term_to_binary(?BOOTSTRAP_PONG(node())),
+         ok = gen_udp:send(Socket, Addr, Port, Msg),
+         ?DBG("Sent PONG to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
+     end || Port <- lists:usort([InPort, State#state.port])],
+    State#state{skip = true}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -212,7 +219,7 @@ handle_pong(Node, State = #state{mode = Mode, pattern = Pattern}) ->
     end,
     case Result of
         false   -> ?ERR("Failed to connect to matching node ~s.", [Node]);
-        true    -> ?DBG("Connected to matching node ~s.", [Node]);
+        true    -> ?DBG("Connected to matching node ~s.~n", [Node]);
         skipped -> ok
     end,
     State.
@@ -234,17 +241,10 @@ do_ping(State = #state{protocol = ProtocolModule}) ->
 do_ping([], State) ->
     ?ERR("No network addresses to send to.", []),
     State;
-do_ping(As, State) ->
-    lists:foldl(
-      fun(A = {I1, I2, I3, I4}, S = #state{port = P}) ->
-              ?DBG("Sent PING to ~w.~w.~w.~w:~w.", [I1, I2, I3, I4, P]),
-              send(A, P, term_to_binary(?BOOTSTRAP_PING(node(), A)), S)
-      end,
-      State, As).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-send(Addr, Port, Message, State = #state{socket = Socket}) ->
-    ok = gen_udp:send(Socket, Addr, Port, Message),
+do_ping(Addresses, State = #state{socket = Socket, port = Port}) ->
+    [begin
+         Msg = term_to_binary(?BOOTSTRAP_PING(node(), Addr)),
+         ok = gen_udp:send(Socket, Addr, Port, Msg),
+         ?DBG("Sent PING to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
+     end || Addr = {I1, I2, I3, I4} <- Addresses],
     State.
