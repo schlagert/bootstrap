@@ -82,7 +82,7 @@ environment:
 * `{multicast_ip, MulticastAddr :: inet:ip4_address()}`
 
   Specifies the multicast address to be used for node discovery when using
-  the `multicast` protocol. Default is `{224, 0, 0, 1}`.
+  the `multicast` protocol. Default is `{239, 192, 0, 1}`.
 
 * `{multicast_ttl, non_neg_integer()}`
 
@@ -101,15 +101,18 @@ starting the application on all nodes is basically all you need. However, some
 use cases may make it necessary to get notified whenever a __matching__
 connection is established or lost.
 
-For this prupose the `bootstrap` application provides the `bootstrap` behaviour.
+For this purpose the `bootstrap` application provides the `bootstrap` behaviour.
 To get notifications about node actions the two functions `on_connected/2` and
 `on_disconnected/3` must be implemented. The implementing handler can the be
 managed using the functions provided in the `bootstrap` module. If you already
 know the `gen_event` behaviour, this will be nothing new for you. All functions
-except for `add_sup_handler/2` basically do the same as the gen_event
+except for `add_sup_handler/2` basically do the same as the `gen_event`
 equivalents. The only difference between `add_handler/2` and `add_sup_handler/2`
 is that the added handler will automatically be removed when the calling process
 exits. No messages will be sent to the calling process.
+
+`bootstrap` handlers will get initial notifications for all _matching_ nodes
+that are currently connected.
 
 For more information, please refer to the `edoc` of the `bootstrap` module.
 
