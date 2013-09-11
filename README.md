@@ -124,17 +124,23 @@ Examples
 
 ### Mesh Topology
 
+<img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." width="350px" />
+
 `visible` connections
 
 TODO
 
 ### Star Topology
 
+<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." width="700px" />
+
 `visible` or `hidden` connections
 
 TODO
 
 ### Tree Topology
+
+<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Tree Topology with hidden connections." width="350px" />
 
 `hidden` connections
 
