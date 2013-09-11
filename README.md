@@ -128,13 +128,13 @@ Examples
 
 TODO
 
-### Tree Topology 1
+### Star Topology
 
-`visible` connections
+`visible` or `hidden` connections
 
 TODO
 
-### Tree Topology 2
+### Tree Topology
 
 `hidden` connections
 
