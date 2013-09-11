@@ -140,7 +140,7 @@ TODO
 
 ### Tree Topology
 
-<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Tree Topology with hidden connections." width="350px" />
+<img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." width="350px" />
 
 `hidden` connections
 
