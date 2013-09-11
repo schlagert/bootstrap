@@ -101,13 +101,13 @@ init([]) ->
     process_flag(trap_exit, true),
     {ok, timer_initial(
            #state{
-              mode     = bootstrap:get_env(connect_mode, visible),
+              mode     = bootstrap:get_env(connect_mode, ?CONNECT_MODE),
               pattern  = bootstrap:pattern(),
-              protocol = to_mod(bootstrap:get_env(protocol, broadcast)),
-              port     = bootstrap:get_env(primary_port, 50337),
+              protocol = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
+              port     = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
               socket   = element(2, {ok, _} = open_socket()),
-              minimum  = bootstrap:get_env(min_connections, infinity),
-              timeout  = bootstrap:get_env(ping_timeout, 10000)})}.
+              minimum  = bootstrap:get_env(min_connections, ?CONNECTIONS),
+              timeout  = bootstrap:get_env(ping_timeout, ?PING_TIMEOUT)})}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -166,9 +166,9 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 %% @private
 %%------------------------------------------------------------------------------
 open_socket() ->
-    Port = bootstrap:get_env(primary_port, 50337),
-    Ports = bootstrap:get_env(secondary_ports, [50338, 50339]),
-    ProtocolModule = to_mod(bootstrap:get_env(protocol, broadcast)),
+    Port = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
+    Ports = bootstrap:get_env(secondary_ports, ?SECONDARY_PORTS),
+    ProtocolModule = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
     PortList = [{ProtocolModule, P} || P <- [Port | Ports]],
     lists:foldl(fun try_open/2, {error, no_ports}, PortList).
 

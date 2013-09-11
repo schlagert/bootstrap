@@ -25,6 +25,8 @@
 %% bootstrap_protocol callbacks
 -export([options/0, addresses/0]).
 
+-include("bootstrap.hrl").
+
 %%%=============================================================================
 %%% bootstrap_protocol callbacks
 %%%=============================================================================
@@ -33,12 +35,12 @@
 %% @private
 %%------------------------------------------------------------------------------
 options() ->
-    Addr = bootstrap:get_env(multicast_ip, {239, 192, 0, 1}),
+    Addr = bootstrap:get_env(multicast_ip, ?MULTICAST_IP),
     [{add_membership, {Addr, {0, 0, 0, 0}}},
-     {multicast_ttl, bootstrap:get_env(multicast_ttl, 1)},
+     {multicast_ttl, bootstrap:get_env(multicast_ttl, ?MULTICAST_TTL)},
      {multicast_loop, true}].
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-addresses() -> [bootstrap:get_env(multicast_ip, {239, 192, 0, 1})].
+addresses() -> [bootstrap:get_env(multicast_ip, ?MULTICAST_IP)].

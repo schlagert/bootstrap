@@ -73,7 +73,7 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 init([]) ->
     Hs = bootstrap:get_env(handlers, []),
     ok = bootstrap:set_env(handlers, []),
-    Mode = bootstrap:get_env(connect_mode, visible),
+    Mode = bootstrap:get_env(connect_mode, ?CONNECT_MODE),
     TypeOpt = {node_type, case Mode of hidden -> all; visible -> Mode end},
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
     {ok, lists:foldl(

@@ -167,7 +167,8 @@ matches(Node, Pattern) ->
 %% @private
 %%------------------------------------------------------------------------------
 -spec pattern() -> re:mp().
-pattern() -> element(2, {ok, _} = re:compile(get_env(connect_regex, ".*"))).
+pattern() ->
+    element(2, {ok, _} = re:compile(get_env(connect_regex, ?CONNECT_REGEX))).
 
 %%------------------------------------------------------------------------------
 %% @private

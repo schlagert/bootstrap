@@ -38,4 +38,18 @@
 -define(BOOTSTRAP_PING(Node, From), {bootstrap, {ping, Node, From}}).
 -define(BOOTSTRAP_PONG(Node),       {bootstrap, {pong, Node}}).
 
+%%%=============================================================================
+%%% Defines configuration defaults.
+%%%=============================================================================
+
+-define(CONNECT_REGEX,   ".*").
+-define(CONNECT_MODE,    visible).
+-define(CONNECTIONS,     infinity).
+-define(PROTOCOL,        broadcast).
+-define(PRIMARY_PORT,    50337).
+-define(SECONDARY_PORTS, [50338, 50339]).
+-define(PING_TIMEOUT,    10000).
+-define(MULTICAST_IP,    {239, 192, 0, 1}).
+-define(MULTICAST_TTL,   1).
+
 -endif. %% bootstrap_hrl_
