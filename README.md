@@ -94,7 +94,9 @@ environment:
   is `1`.
 
 The default configuration can be used to form an unbounded, mesh-connected
-Erlang cluster utilizing the UDP broadcast protocol.
+Erlang cluster utilizing the UDP broadcast protocol. Please note that to be able
+to connect to other Erlang nodes, these nodes __must have the same Erlang
+cookie__ configured.
 
 Notifications
 -------------
@@ -119,12 +121,21 @@ that are currently connected.
 
 For more information, please refer to the `edoc` of the `bootstrap` module.
 
+Security
+--------
+
+The `bootstrap` application __is__ insecure. This means everyone with access to
+the used broadcast/multicast domain can send, receive and read `bootstrap`
+packets. __However__, to be able to connect to any of the gathered nodenames an
+attacker must know the used Erlang cookie. The `bootstrap` application will
+never transmit cookies over the wire in any form.
+
 Examples
 --------
 
 ### Mesh Topology
 
-<img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." width="350px" />
+<img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." />
 
 `visible` connections
 
@@ -132,7 +143,7 @@ TODO
 
 ### Star Topology
 
-<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." width="700px" />
+<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." />
 
 `visible` or `hidden` connections
 
@@ -140,7 +151,7 @@ TODO
 
 ### Tree Topology
 
-<img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." width="350px" />
+<img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." />
 
 `hidden` connections
 
