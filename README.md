@@ -143,9 +143,7 @@ handlers does not differ from the `net_kernel` view:
 
 The `sys.config` configuration to build a topology like this would look like the
 following (on all nodes):
-```erlang
-[{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].
-```
+`[{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].`
 
 ### Star Topology
 
@@ -158,23 +156,13 @@ following:
 
 * with `visible` connections (left example)
 
-Master node:
-```erlang
-[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].
-
-Slaves nodes:
-[{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].
-```
+  Master node:  `[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].`
+  Slaves nodes: `[{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].`
 
 * with `hidden` connections (right example)
 
-Master node:
-```erlang
-[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
-
-Slaves nodes:
-[{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
-```
+  Master node:  `[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].`
+  Slaves nodes: `[{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].`
 
 ### Tree Topology
 
