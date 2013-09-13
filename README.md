@@ -135,11 +135,17 @@ Examples
 
 ### Mesh Topology
 
+This is the basic setup you get using standard `net_kernel` and `global`. Every
+node is connect with every other node in the cluster. The `bootstrap` view does
+not differ from the `kernel` view.
+
 <img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." />
 
-`visible` connections
-
-TODO
+The `sys.config` configuration to build a cluster like this would look like the
+following (on all nodes):
+```erlang
+[{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].
+```
 
 ### Star Topology
 
