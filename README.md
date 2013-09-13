@@ -135,13 +135,13 @@ Examples
 
 ### Mesh Topology
 
-This is the basic setup you get using standard `net_kernel` and `global`. Every
-node is connect with every other node in the cluster. The `bootstrap` view does
-not differ from the `kernel` view.
+This is the basic setup you get when connecting to other nodes. Every node is
+connected with every other node in the cluster. The view for `bootstrap`
+handlers does not differ from the `net_kernel` view:
 
 <img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." />
 
-The `sys.config` configuration to build a cluster like this would look like the
+The `sys.config` configuration to build a topology like this would look like the
 following (on all nodes):
 ```erlang
 [{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].
@@ -149,11 +149,32 @@ following (on all nodes):
 
 ### Star Topology
 
+TODO
+
 <img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." />
 
-`visible` or `hidden` connections
+The `sys.config` configuration to build a topology like this would look like the
+following:
 
-TODO
+* with `visible` connections (left example)
+
+Master node:
+```erlang
+[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].
+
+Slaves nodes:
+[{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].
+```
+
+* with `hidden` connections (right example)
+
+Master node:
+```erlang
+[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+
+Slaves nodes:
+[{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
 
 ### Tree Topology
 
