@@ -82,6 +82,13 @@ environment:
   Specifies the rough time in milliseconds between two consecutive, active node
   discovery messages. Default is `10000`.
 
+* `{broadcast_ip, BroadcastAddr :: inet:ip4_address()}`
+
+  Specifies the address to use for broadcast discovery. This parameter is
+  _optional_. If not specified `bootstrap` scans all available network
+  interfaces and uses those capable of broadcast. This parameter is useful if
+  you want to limit `bootstrap` traffic to a specific subnet.
+
 * `{multicast_ip, MulticastAddr :: inet:ip4_address()}`
 
   Specifies the multicast address to be used for node discovery when using
@@ -143,7 +150,9 @@ handlers does not differ from the `net_kernel` view:
 
 The `sys.config` configuration to build a topology like this would look like the
 following (on all nodes):
-`[{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].`
+```erlang
+[{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].
+```
 
 ### Star Topology
 
@@ -151,18 +160,29 @@ TODO
 
 <img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." />
 
-The `sys.config` configuration to build a topology like this would look like the
-following:
+The `sys.config` configuration to build a topology as shown in the __left__
+example would look like the following:
 
-* with `visible` connections (left example)
+Master node:
+```erlang
+[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].
+```
+Slaves nodes:
+```erlang
+[{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].
+```
 
-  Master node:  `[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].`
-  Slaves nodes: `[{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].`
+The `sys.config` configuration to build a topology as shown in the __right__
+example would look like the following:
 
-* with `hidden` connections (right example)
-
-  Master node:  `[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].`
-  Slaves nodes: `[{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].`
+Master node:
+```erlang
+[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
+Slaves nodes:
+```erlang
+[{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
 
 ### Tree Topology
 
