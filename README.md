@@ -186,7 +186,13 @@ example would look like the following:
 
 ### Tree Topology
 
-TODO
+This is a more complex example using `hidden` connections. The configurations
+not only differ from level to level, beginning at level two, a node must
+additionally decide to which branch of the tree it wants to connect. As can be
+seen in the configurations below, level one nodes use a combined regular
+expression to match `root` and `level2` nodes. A regular expression matching
+only `root` nodes would be sufficient to connect the tree, however, in this case
+level one nodes would not get notifications about connected level two nodes.
 
 <img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." />
 
@@ -198,7 +204,7 @@ following:
 ```
 `level1` nodes:
 ```erlang
-[{bootstrap, [{connect_regex, "root@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+[{bootstrap, [{connect_regex, "(root|level2)@.*"}, {connect_mode, hidden}, {min_connections, 2}]}].
 ```
 `level2` nodes (depending on which part of the tree a node should connect to):
 ```erlang
