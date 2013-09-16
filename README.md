@@ -85,7 +85,7 @@ environment:
 * `{broadcast_ip, BroadcastAddr :: inet:ip4_address()}`
 
   Specifies the address to use for broadcast discovery. This parameter is
-  _optional_. If not specified `bootstrap` scans all available network
+  __optional__. If not specified `bootstrap` scans all available network
   interfaces and uses those capable of broadcast. This parameter is useful if
   you want to limit `bootstrap` traffic to a specific subnet.
 
@@ -163,11 +163,11 @@ TODO
 The `sys.config` configuration to build a topology as shown in the __left__
 example would look like the following:
 
-Master node:
+`master` node:
 ```erlang
 [{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].
 ```
-Slaves nodes:
+`slave` nodes:
 ```erlang
 [{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].
 ```
@@ -175,22 +175,39 @@ Slaves nodes:
 The `sys.config` configuration to build a topology as shown in the __right__
 example would look like the following:
 
-Master node:
+`master` node:
 ```erlang
 [{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
 ```
-Slaves nodes:
+`slave` nodes:
 ```erlang
 [{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
 ```
 
 ### Tree Topology
 
+TODO
+
 <img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." />
 
-`hidden` connections
-
-TODO
+The `sys.config` configuration to build a topology like this would look like the
+following:
+`root` node:
+```erlang
+[{bootstrap, [{connect_regex, "level1.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
+`level1` nodes:
+```erlang
+[{bootstrap, [{connect_regex, "root@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
+`level2` nodes (depending on which part of the tree a node should connect to):
+```erlang
+[{bootstrap, [{connect_regex, "level1a@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
+or
+```erlang
+[{bootstrap, [{connect_regex, "level1b@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
+```
 
 History
 -------
