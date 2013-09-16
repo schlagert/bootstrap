@@ -156,7 +156,22 @@ following (on all nodes):
 
 ### Star Topology
 
-TODO
+This example shows the difference between `visible` and `hidden` connections.
+While `visible` connections (default Erlang) always build a mesh connected
+cluster (from the `net_kernel` view), `hidden` connections allow building custom
+cluster topologies. However, global name registration cannot be used in this
+case!
+
+The left figure shows the `visible` connection example. In this case the
+`bootstrap` filters connection notifications according to the configured
+`connect_regex`. This means when connecting the cluster `bootstrap` handlers
+will only get notifications for the nodes part of the `bootstrap` view of the
+cluster (top of the figure), although other connections may be established
+automatically by the `kernel` application.
+
+The right figure shows the star topology _forced_ to the `net_kernel` using
+`hidden` node connections that may not be used by the `kernel` to connect to
+other nodes automatically.
 
 <img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." />
 
