@@ -35,8 +35,8 @@
 %%% Define the application internal bootstrap protocol.
 %%%=============================================================================
 
--define(BOOTSTRAP_PING(Node, From), {bootstrap, {ping, Node, From}}).
--define(BOOTSTRAP_PONG(Node),       {bootstrap, {pong, Node}}).
+-define(BOOTSTRAP_PING(PingNode, PingAddr), {bootstrap, {ping, PingNode, PingAddr}}).
+-define(BOOTSTRAP_PONG(Node, PingNode),     {bootstrap, {pong, Node, PingNode}}).
 
 %%%=============================================================================
 %%% Defines configuration defaults.
