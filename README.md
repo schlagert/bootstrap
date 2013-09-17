@@ -126,7 +126,9 @@ exits. No messages will be sent to the calling process.
 `bootstrap` handlers will get initial notifications for all __matching__ nodes
 that are currently connected.
 
-For more information, please refer to the `edoc` of the `bootstrap` module.
+The `example` directory contains a simple example of a `gen_server` subscribing
+for `bootstrap` notifications. For more information, please refer to the `edoc`
+of the `bootstrap` module.
 
 Security
 --------
