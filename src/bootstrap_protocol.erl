@@ -93,7 +93,7 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
           port     :: inet:port_number(),
           socket   :: inet:socket(),
           timer    :: reference(),
-          minimum  :: non_neg_integer(),
+          minimum  :: non_neg_integer() | infinity,
           timeout  :: non_neg_integer()}).
 
 %%------------------------------------------------------------------------------
