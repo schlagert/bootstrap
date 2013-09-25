@@ -171,6 +171,15 @@ never transmit cookies over the wire in any form.
 Examples
 --------
 
+This section gives some configuration examples along with respective resulting
+topologies. A small note to the used figures:
+
+* The grey `bootstrap` box outlines the view of node connections a `bootstrap`
+  handler would see (the handler would get notifications for these nodes).
+
+* The grey `net_kernel` box outlines the actual connections of a node. This is
+  equivalent to the list of nodes you get from `erlang:nodes(connected)`.
+
 ### Mesh Topology
 
 This is the basic setup you get when connecting to other nodes. Every node is
