@@ -22,7 +22,36 @@ Features
 How it works
 ------------
 
-TODO
+The node discovery process is based on a simple, distributed P2P protocol
+defining two PDUs, the `bootstrap` _PING_ and _PONG_ messages. As mentioned
+earlier, these messages are distributed via either UDP broadcast or multicast.
+All nodes in the cluster __must__ run the same protocol. See below for the
+representation of the messages.
+
+```erlang
+%% PING:
+term_to_binary({bootstrap, {ping, PingNode :: node(), PingAddr :: inet:ip4_address()}}).
+
+%% PONG:
+term_to_binary({bootstrap, {pong, PongNode :: node(), PingNode :: node()}}).
+```
+
+It's well known that broadcast as well as multicast can load a network pretty
+heavy. Therefore, the `bootstrap` application takes measures to reduce the
+network traffic to a minimum using strategies known from P2P overlay protocols
+designed for the use in mobile Ad-hoc networks (which are very sensitive to
+extensive medium usage).
+
+Most of the ideas behind the `bootstrap` protocol are inspired by the _Local
+Broadcast Cluster_ concept described in [1]. _PING_ __and__ _PONG_ messages are
+distributed as broadcast/multicast. This makes it possible to have only one
+active instance of the protocol at a time. To ensure this, the `bootstrap`
+protocol will detect and solve _PING_ collisions. Furthermore, it will use
+information from _PONG_ messages to make distributed decisions whether to ping
+or not to ping. All traffic will be stopped as soon as all nodes in the cluster
+meet their connectivity needs.
+
+TODO make more detailed description (e.g. with figures)
 
 Configuration
 -------------
@@ -151,8 +180,10 @@ handlers does not differ from the `net_kernel` view:
 <img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." />
 
 The `sys.config` configuration to build a topology like this would look like the
-following (on all nodes):
+following:
+
 ```erlang
+%% on all nodes:
 [{bootstrap, [{connect_regex, ".*"}, {min_connections, 1}]}].
 ```
 
@@ -180,24 +211,22 @@ other nodes automatically.
 The `sys.config` configuration to build a topology as shown in the __left__
 example would look like the following:
 
-`master` node:
 ```erlang
-[{bootstrap, [{connect_regex, "slave@.*"}, {min_connections, 1}]}].
-```
-`slave` nodes:
-```erlang
+%% master node:
+[{bootstrap, [{connect_regex, "slave@.*"},  {min_connections, 1}]}].
+
+%% slave node:
 [{bootstrap, [{connect_regex, "master@.*"}, {min_connections, 1}]}].
 ```
 
 The `sys.config` configuration to build a topology as shown in the __right__
 example would look like the following:
 
-`master` node:
 ```erlang
-[{bootstrap, [{connect_regex, "slave@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
-```
-`slave` nodes:
-```erlang
+%% master node:
+[{bootstrap, [{connect_regex, "slave@.*"},  {connect_mode, hidden}, {min_connections, 1}]}].
+
+%% slave node:
 [{bootstrap, [{connect_regex, "master@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
 ```
 
@@ -215,20 +244,17 @@ level one nodes would not get notifications about connected level two nodes.
 
 The `sys.config` configuration to build a topology like this would look like the
 following:
-`root` node:
+
 ```erlang
+%% root node:
 [{bootstrap, [{connect_regex, "level1.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
-```
-`level1` nodes:
-```erlang
+
+%% level1 nodes:
 [{bootstrap, [{connect_regex, "(root|level2)@.*"}, {connect_mode, hidden}, {min_connections, 2}]}].
-```
-`level2` nodes (depending on which part of the tree a node should connect to):
-```erlang
+
+%% level2 nodes (depending on which part of the tree a node should connect to):
 [{bootstrap, [{connect_regex, "level1a@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
-```
-or
-```erlang
+%% or
 [{bootstrap, [{connect_regex, "level1b@.*"}, {connect_mode, hidden}, {min_connections, 1}]}].
 ```
 
@@ -243,3 +269,9 @@ History
 * Multi-node-per-host support
 * Avoid duplicate broadcasts to minimize network usage
 * Behaviour-based notification system
+
+References
+----------
+
+[1] Basissoftware für drahtlose Ad-hoc- und Sensornetze,
+    P. Baumung and M. Zitterbart, 2009 Universitätsverlag Karlsruhe
