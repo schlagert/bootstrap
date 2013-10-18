@@ -94,7 +94,7 @@ environment:
 
 * `{secondary_ports, [inet:port_number()]}`
 
-  Specified additional listen ports. This feature is necessary if the system
+  Specifies additional listen ports. This feature is necessary if the system
   involves more than one node per host, since there's no common way to listen
   on the same network port from multiple processes. For each additional node per
   host another network port is required. E.g. if a system has a host with three
@@ -144,7 +144,7 @@ __matching__ connection is established or lost.
 
 For this purpose the `bootstrap` application provides the `bootstrap` behaviour.
 To get notifications about node actions the two functions `on_connected/2` and
-`on_disconnected/3` must be implemented. The implementing handler can the be
+`on_disconnected/3` must be implemented. The implementing handler can then be
 managed using the functions provided in the `bootstrap` module. If you already
 know the `gen_event` behaviour, this will be nothing new for you. All functions
 except for `add_sup_handler/2` basically do the same as the `gen_event`
@@ -154,6 +154,16 @@ exits. No messages will be sent to the calling process.
 
 `bootstrap` handlers will get initial notifications for all __matching__ nodes
 that are currently connected.
+
+The `net_kernel` module also allows registration of process for node up/down
+messages. However, there are some major advantages when using the `bootstrap`
+notification system:
+* Only notification for __matching__ nodes will be delivered.
+* If using visible connections, the `on_connected/2` callback will be delayed
+  until all global name servers are in sync. This means, in contrary to the
+  `net_kernel` messages, a globally registered process on a newly connected node
+  can be used immediatelly after receiving the corresponding `on_connected/2`
+  callback.
 
 The `example` directory contains a simple example of a `gen_server` subscribing
 for `bootstrap` notifications. For more information, please refer to the `edoc`

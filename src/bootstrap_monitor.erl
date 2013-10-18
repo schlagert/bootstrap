@@ -65,6 +65,7 @@ add(Handler) -> gen_server:call(?MODULE, {add, Handler}).
 
 -record(state, {
           pattern       :: re:mp(),
+          mode          :: visible | hidden,
           handlers = [] :: [{reference(), #bootstrap_handler{}}]}).
 
 %%------------------------------------------------------------------------------
@@ -78,7 +79,7 @@ init([]) ->
     ok = net_kernel:monitor_nodes(true, [TypeOpt, nodedown_reason]),
     {ok, lists:foldl(
            fun(H, S) -> element(2, handle_add(false, H, S)) end,
-           #state{pattern = bootstrap:pattern()}, Hs)}.
+           #state{pattern = bootstrap:pattern(), mode = Mode}, Hs)}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -146,7 +147,8 @@ handle_add(Report, Handler = #bootstrap_handler{pid = Pid}, State) ->
 %% @private
 %%------------------------------------------------------------------------------
 maybe_report(true, Handler, State) ->
-    bootstrap_event:on_connected(Handler, matching(State)),
+    %% Do not block the whole server, on_connected/2 is synchronous.
+    spawn(fun() -> bootstrap_event:on_connected(Handler, matching(State)) end),
     State;
 maybe_report(false, _Handler, State) ->
     State.
@@ -171,9 +173,9 @@ handle_down(Ref, State = #state{handlers = Hs}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_nodeup(Node, State = #state{pattern = Pattern}) ->
+handle_nodeup(Node, State = #state{pattern = Pattern, mode = Mode}) ->
     case bootstrap:matches(Node, Pattern) of
-        true  -> bootstrap_event:on_connected(Node);
+        true  -> report(Node, Mode);
         false -> ok
     end,
     State.
@@ -187,3 +189,16 @@ handle_nodedown(Node, Reason, State = #state{pattern = Pattern}) ->
         false -> ok
     end,
     State.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+report(Node, visible) ->
+    %% Do not block the whole server, since sync may take a while.
+    spawn(fun() ->
+                  Time = element(1, timer:tc(global, sync, [])) div 1000,
+                  ?DBG("Global synchronization took ~pms.~n", [Time]),
+                  bootstrap_event:on_connected(Node)
+          end);
+report(Node, hidden) ->
+    bootstrap_event:on_connected(Node).

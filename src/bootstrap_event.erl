@@ -108,17 +108,17 @@ on_connected(Node) -> gen_event:notify(?MODULE, {connected, Node}).
 %%------------------------------------------------------------------------------
 %% @doc
 %% Notifies a list of matching, connected nodes to a certain event handler.
+%% Unlike {@link on_connected/1}, this function is synchronous. Unfortunately
+%% the underlying `gen_event' does not allow addressing a specific handler with
+%% asynchronous functions.
 %% @end
 %%------------------------------------------------------------------------------
--spec on_connected(#bootstrap_handler{}, [node()]) -> ok.
+-spec on_connected(#bootstrap_handler{}, [node()]) -> ok | {error, term()}.
 on_connected(_Handler, []) ->
     ok;
 on_connected(#bootstrap_handler{module = Module}, Nodes) ->
-    spawn(fun() ->
-                  H = ?BOOTSTRAP_HANDLER(Module),
-                  gen_event:call(?MODULE, H, {connected, Nodes}, infinity)
-          end),
-    ok.
+    H = ?BOOTSTRAP_HANDLER(Module),
+    gen_event:call(?MODULE, H, {connected, Nodes}, infinity).
 
 %%------------------------------------------------------------------------------
 %% @doc
