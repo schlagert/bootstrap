@@ -17,7 +17,17 @@
 -ifndef(bootstrap_hrl_).
 -define(bootstrap_hrl_, 1).
 
+%%%=============================================================================
+%%% Deines related to application internal logging.
+%%%=============================================================================
+
 -define(ERR(Fmt, Args), error_logger:error_msg(Fmt, Args)).
+
+-ifdef(DEBUG).
+-define(DBG(Fmt, Args), io:format(Fmt, Args)).
+-else.
+-define(DBG(Fmt, Args), Fmt = Fmt, Args = Args, ok).
+-endif.
 
 %%%=============================================================================
 %%% Define the application internal bootstrap event handler {Module, Id}.
