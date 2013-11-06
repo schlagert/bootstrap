@@ -280,6 +280,10 @@ following:
 History
 -------
 
+### Master
+
+* Development, currently no difference to version 0.0.1.
+
 ### Version 0.0.1
 
 * Regular expression based node matching
