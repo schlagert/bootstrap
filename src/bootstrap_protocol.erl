@@ -96,14 +96,14 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
 init([]) ->
     process_flag(trap_exit, true),
     {ok, timer_backoff(
-           #state{
-              mode     = bootstrap:get_env(connect_mode, ?CONNECT_MODE),
-              pattern  = bootstrap:pattern(),
-              protocol = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
-              port     = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
-              socket   = element(2, {ok, _} = open_socket()),
-              minimum  = bootstrap:get_env(min_connections, ?CONNECTIONS),
-              timeout  = bootstrap:get_env(ping_timeout, ?PING_TIMEOUT)})}.
+           open_udp_port(
+             #state{
+                mode     = bootstrap:get_env(connect_mode, ?CONNECT_MODE),
+                pattern  = bootstrap:pattern(),
+                protocol = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
+                port     = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
+                minimum  = bootstrap:get_env(min_connections, ?CONNECTIONS),
+                timeout  = bootstrap:get_env(ping_timeout, ?PING_TIMEOUT)}))}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -143,6 +143,8 @@ handle_info({udp_closed, S}, State = #state{socket = S}) ->
 handle_info({timeout, Ref, ping}, State = #state{timer = Ref}) ->
     %% we are the chose ones, ping if necessary !!
     {noreply, timer_periodic(maybe_ping(State))};
+handle_info({timeout, _, realloc_port}, State) ->
+    {noreply, open_udp_port(State)};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -163,20 +165,36 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-open_socket() ->
-    Port = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
+open_udp_port(State = #state{socket = undefined, port = PrimaryPort}) ->
     Ports = bootstrap:get_env(secondary_ports, ?SECONDARY_PORTS),
+    {{ok, Socket}, Port} = open_oneof_udp_ports([PrimaryPort | Ports]),
+    ?DBG("Using port ~w.~n", [Port]),
+    realloc_port_timer(Port, State#state{socket = Socket});
+open_udp_port(State = #state{socket = CurrentSocket, port = PrimaryPort}) ->
+    case open_oneof_udp_ports([PrimaryPort]) of
+        {{ok, NewSocket}, PrimaryPort} ->
+            ?DBG("Using port ~w.~n", [PrimaryPort]),
+            gen_udp:close(CurrentSocket),
+            State#state{socket = NewSocket};
+        {{error, _}, PrimaryPort} ->
+            realloc_port_timer(-1, State)
+    end.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+open_oneof_udp_ports(Ports) ->
     ProtocolModule = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
-    PortList = [{ProtocolModule, P} || P <- [Port | Ports]],
+    PortList = [{ProtocolModule, Port} || Port <- Ports],
     lists:foldl(fun try_open/2, {error, no_ports}, PortList).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-try_open(_, {ok, Socket}) ->
-    {ok, Socket};
+try_open(_, {{ok, Socket}, Port}) ->
+    {{ok, Socket}, Port};
 try_open({ProtocolModule, Port}, _) ->
-    gen_udp:open(Port, [binary | ProtocolModule:options()]).
+    {gen_udp:open(Port, [binary | ProtocolModule:options()]), Port}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -186,22 +204,42 @@ to_mod(multicast) -> bootstrap_multicast.
 
 %%------------------------------------------------------------------------------
 %% @private
+%% A timer scheduling a ping with a certain, static time.
 %%------------------------------------------------------------------------------
 timer_backoff(State = #state{timeout = Timeout}) ->
-    start_timer(max(1500, Timeout + (Timeout div 2)), State).
+    ping_timer(max(1500, Timeout + (Timeout div 2)), State).
 
 %%------------------------------------------------------------------------------
 %% @private
+%% A timer scheduling a ping with a certain, variable time.
 %%------------------------------------------------------------------------------
 timer_periodic(State = #state{timeout = Timeout}) ->
-    start_timer(max(0, Timeout - 1000) + crypto:rand_uniform(0, 1000), State).
+    ping_timer(max(0, Timeout - 1000) + crypto:rand_uniform(0, 1000), State).
+
+%%------------------------------------------------------------------------------
+%% @private
+%% A timer scheduling a port reallocation attempt. This is done to always keep
+%% the primary port maintained by some node. This is needed for node discovery
+%% functioning properly. The primary port can become unoccupied when the node
+%% listening on it exits.
+%%------------------------------------------------------------------------------
+realloc_port_timer(PrimaryPort, State = #state{port = PrimaryPort}) ->
+    State;
+realloc_port_timer(_SecondaryPort, State) ->
+    start_timer(1000, realloc_port),
+    State.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-start_timer(Millis, State = #state{timer = OldRef}) ->
+ping_timer(Millis, State = #state{timer = OldRef}) ->
     case OldRef of undefined -> ok; _ -> erlang:cancel_timer(OldRef) end,
-    State#state{timer = erlang:start_timer(Millis, self(), ping)}.
+    State#state{timer = start_timer(Millis, ping)}.
+
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+start_timer(Millis, Message) -> erlang:start_timer(Millis, self(), Message).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -266,7 +304,7 @@ maybe_connect(Node, State = #state{mode = Mode, pattern = Pattern}) ->
 %%------------------------------------------------------------------------------
 %% @private
 %% This function is called when this node receives a ping from another node. If
-%% this ping was sent from a node that listens on th primary port, the function
+%% this ping was sent from a node that listens on the primary port, the function
 %% delegates to {@link maybe_backoff/2}, in the other case this node backs off
 %% since the other node listens on a secondary port and thus can't receive pings
 %% at all, implication is that it must be the pinger.

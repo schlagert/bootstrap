@@ -282,7 +282,7 @@ History
 
 ### Master
 
-* Development, currently no difference to version 0.0.1.
+* Fixes #1 Discovery problems when using multiple nodes per host
 
 ### Version 0.0.1
 
