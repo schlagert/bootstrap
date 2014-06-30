@@ -4,11 +4,15 @@ bootstrap
 The `bootstrap` application is a simple, yet poweful application to bootstrap an
 Erlang cluster without having to know the exact nodenames or hostnames in
 advance. It automates the process of dynamically populating the cluster with new
-nodes.
+nodes. There's also a
+[Java implementation](https://github.com/doctainer/org.maushake.bootstrap)
+of the bootstrap protocol based on Jinterface which adds `bootstrap` support to
+Java nodes.
 
 * [Code](http://github.com/schlagert/bootstrap)
 * [EDoc](http://schlagert.github.com/bootstrap)
 * [![Build Status](https://travis-ci.org/schlagert/bootstrap.png?branch=master)](https://travis-ci.org/schlagert/bootstrap)
+
 
 Features
 --------
@@ -18,6 +22,7 @@ Features
 * Suppport multiple nodes per host.
 * Support creation of complex topologies using `hidden` connections.
 * Provide node connection/disconnection notification system.
+* Also available to [Java nodes](https://github.com/doctainer/org.maushake.bootstrap).
 
 How it works
 ------------
