@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/schlagert/bootstrap.png?branch=master)](https://travis-ci.org/schlagert/bootstrap)
+
 bootstrap
 =========
 
@@ -8,11 +10,6 @@ nodes. There's also a
 [Java implementation](https://github.com/doctainer/org.maushake.bootstrap)
 of the bootstrap protocol based on Jinterface which adds `bootstrap` support to
 Java nodes.
-
-* [Code](http://github.com/schlagert/bootstrap)
-* [EDoc](http://schlagert.github.com/bootstrap)
-* [![Build Status](https://travis-ci.org/schlagert/bootstrap.png?branch=master)](https://travis-ci.org/schlagert/bootstrap)
-
 
 Features
 --------
@@ -201,7 +198,7 @@ This is the basic setup you get when connecting to other nodes. Every node is
 connected with every other node in the cluster. The view for `bootstrap`
 handlers does not differ from the `net_kernel` view:
 
-<img src="http://schlagert.github.com/bootstrap/mesh.svg" alt="Mesh Topology with visible connections." />
+<img src="https://cloud.githubusercontent.com/assets/404313/4612211/6bcf65ee-52c4-11e4-9f73-943de74796f6.png" alt="Mesh Topology with visible connections." />
 
 The `sys.config` configuration to build a topology like this would look like the
 following:
@@ -230,7 +227,7 @@ The right figure shows the star topology _forced_ to the `net_kernel` using
 `hidden` node connections that may not be used by the `kernel` to connect to
 other nodes automatically.
 
-<img src="http://schlagert.github.com/bootstrap/star.svg" alt="Star Topology with visible and hidden connections." />
+<img src="https://cloud.githubusercontent.com/assets/404313/4612210/6bcdb30c-52c4-11e4-9295-53110a29e9b9.png" alt="Star Topology with visible and hidden connections." />
 
 The `sys.config` configuration to build a topology as shown in the __left__
 example would look like the following:
@@ -264,7 +261,7 @@ expression to match `root` and `level2` nodes. A regular expression matching
 only `root` nodes would be sufficient to connect the tree, however, in this case
 level one nodes would not get notifications about connected level two nodes.
 
-<img src="http://schlagert.github.com/bootstrap/tree.svg" alt="Tree Topology with hidden connections." />
+<img src="https://cloud.githubusercontent.com/assets/404313/4612212/6bd808ca-52c4-11e4-8ceb-02cefbf6cd5e.png" alt="Tree Topology with hidden connections." />
 
 The `sys.config` configuration to build a topology like this would look like the
 following:
