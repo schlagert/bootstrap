@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -15,21 +15,16 @@
 %%%
 %%% @doc
 %%% A simple example for a `gen_server' subscribing to `bootstrap'
-%%% notifications. Compile with, e.g. `erlc -pa ../ebin/ example_server.erl'.
+%%% notifications. Compile with, e.g. `erlc -I ../include example_server.erl'.
 %%% @end
 %%%=============================================================================
 
 -module(example_server).
 
 -behaviour(gen_server).
--behaviour(bootstrap).
 
 %% API
 -export([start_link/0]).
-
-%% bootstrap callbacks
--export([on_connected/2,
-         on_disconnected/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -40,6 +35,8 @@
          code_change/3]).
 
 -record(state, {}).
+
+-include("bootstrap.hrl").
 
 %%%=============================================================================
 %%% API
@@ -53,33 +50,13 @@
 start_link() -> gen_server:start_link(?MODULE, [], []).
 
 %%%=============================================================================
-%%% bootstrap callbacks
-%%%=============================================================================
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-on_connected(Node, Pid) ->
-    gen_server:cast(Pid, {connected, Node}),
-    Pid.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-on_disconnected(Node, Reason, Pid) ->
-    gen_server:cast(Pid, {disconnected, Node, Reason}),
-    Pid.
-
-%%%=============================================================================
 %%% gen_server callbacks
 %%%=============================================================================
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-init([]) ->
-    ok = bootstrap:add_sup_handler(?MODULE, self()),
-    {ok, #state{}}.
+init([]) -> {bootstrap:monitor_nodes(true), #state{}}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -89,18 +66,17 @@ handle_call(_Request, _From, State) -> {reply, ok, State}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_cast({connected, Node}, State) ->
-    error_logger:info_msg("Node ~s connected.", [Node]),
-    {noreply, State};
-handle_cast({disconnected, Node, Reason}, State) ->
-    error_logger:info_msg("Node ~s disconnected (~p).", [Node, Reason]),
-    {noreply, State};
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast(_Msg, State) -> {noreply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
+handle_info(?BOOTSTRAP_UP(Node), State) ->
+    error_logger:info_msg("Node ~s connected.", [Node]),
+    {noreply, State};
+handle_info(?BOOTSTRAP_DOWN(Node, Reason), State) ->
+    error_logger:info_msg("Node ~s disconnected (~p).", [Node, Reason]),
+    {noreply, State};
 handle_info(_Info, State) -> {noreply, State}.
 
 %%------------------------------------------------------------------------------

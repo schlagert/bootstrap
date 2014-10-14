@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,6 @@
   {vsn, "0.0.2"},
   {registered,
    [
-    bootstrap_event,
     bootstrap_monitor
    ]},
   {applications,
@@ -30,4 +29,15 @@
     crypto
    ]},
   {mod, {bootstrap, []}},
-  {env, []}]}.
+  {env,
+   [
+    {connect_regex, ".*"},
+    {connect_mode, visible},
+    {min_connections, infinity},
+    {protocol, broadcast},
+    {primary_port, 50337},
+    {secondary_ports, [50338, 50339]},
+    {ping_timeout, 10000},
+    {multicast_ip, {239, 192, 0, 1}},
+    {multicast_ttl, 1}
+   ]}]}.

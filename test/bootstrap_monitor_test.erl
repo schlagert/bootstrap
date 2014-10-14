@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -19,135 +19,116 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("bootstrap/include/bootstrap.hrl").
 
--behaviour(bootstrap).
-
--export([on_connected/2, on_disconnected/3]).
-
 %%%=============================================================================
 %%% TESTS
 %%%=============================================================================
 
-add_no_connect_regex_test() ->
-    process_flag(trap_exit, true),
-    {ok, EvtPid} = bootstrap_event:start_link(),
-    {ok, MonPid} = bootstrap_monitor:start_link(),
+monitor_demonitor_test() ->
+    Handler = self(),
 
-    Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
-    ok = bootstrap_monitor:add(Handler),
-    receive {connected, Node} when Node =:= node() -> ok end,
+    Pid = start_link(),
 
-    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
+    %% register handler
+    [] = bootstrap_monitor:handlers(),
+    ok = bootstrap_monitor:monitor_nodes(true, Handler),
+    [Handler] = bootstrap_monitor:handlers(),
 
-    exit(MonPid, shutdown),
-    receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, kill),
-    receive {'EXIT', EvtPid, killed} -> ok end.
+    %% unregister handler
+    ok = bootstrap_monitor:monitor_nodes(false, Handler),
+    [] = bootstrap_monitor:handlers(),
 
-add_with_connect_regex_test() ->
-    process_flag(trap_exit, true),
+    ok = stop(Pid).
 
-    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
+nodeup_after_monitor_test() ->
+    Node = 'joe@erlang.org',
+    Handler = self(),
 
-    {ok, EvtPid} = bootstrap_event:start_link(),
-    {ok, MonPid} = bootstrap_monitor:start_link(),
+    Pid = start_link(),
 
-    Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
-    ok = bootstrap_monitor:add(Handler),
+    %% register handler
+    [] = bootstrap_monitor:handlers(),
+    ok = bootstrap_monitor:monitor_nodes(true, Handler),
+    [Handler] = bootstrap_monitor:handlers(),
 
-    MonPid ! {nodeup, 'test1@host.domain', [{node_type, visible}]},
-    receive {connected, 'test1@host.domain'} -> ok end,
+    %% fake nodeup for Node... handler receives notification
+    Pid ! {nodeup, Node, []},
+    receive ?BOOTSTRAP_UP(Node) -> ok end,
 
-    MonPid ! {nodeup, 'test2@host.domain', [{node_type, visible}]},
-    receive {connected, 'test2@host.domain'} -> ok end,
+    %% unregister handler
+    ok = bootstrap_monitor:monitor_nodes(false, Handler),
+    [] = bootstrap_monitor:handlers(),
 
-    MonPid ! {nodedown, 'test2@host.domain', [{nodedown_reason, reason}]},
-    receive {disconnected, 'test2@host.domain', reason} -> ok end,
-
-    exit(MonPid, shutdown),
-    receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, kill),
-    receive {'EXIT', EvtPid, killed} -> ok end.
-
-add_supervised_test() ->
-    process_flag(trap_exit, true),
-
-    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
-
-    {ok, EvtPid} = bootstrap_event:start_link(),
-    {ok, MonPid} = bootstrap_monitor:start_link(),
-
-    Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
-    RegPid = spawn_link(
-               fun() ->
-                       H = Handler#bootstrap_handler{pid = self()},
-                       bootstrap_event:add(H),
-                       H#bootstrap_handler.arg ! registered,
-                       receive _ -> ok end
-               end),
-    receive registered -> ok end,
-
-    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
-
-    MonPid ! {nodeup, 'test1@host.domain', [{node_type, visible}]},
-    receive {connected, 'test1@host.domain'} -> ok end,
-
-    RegPid ! shutdown,
-    receive {'EXIT', RegPid, normal} -> ok end,
-
-    MonPid ! {nodedown, 'test1@host.domain', [{nodedown_reason, reason}]},
+    %% fake nodedown for Node... doesn't get delivered to anybody
+    Pid ! {nodedown, Node, [{nodedown_reason, expected}]},
     receive
-        {disconnected, 'test1@host.domain', reason} -> throw(test_failed)
+        Msg = ?BOOTSTRAP_DOWN(Node, _) -> throw({unexpected, Msg})
     after
         100 -> ok
     end,
 
-    exit(MonPid, shutdown),
-    receive {'EXIT', MonPid, shutdown} -> ok end,
-    exit(EvtPid, kill),
-    receive {'EXIT', EvtPid, killed} -> ok end.
+    ok = stop(Pid).
 
-re_add_test() ->
-    process_flag(trap_exit, true),
+nodeup_before_monitor_test() ->
+    Node = 'joe@erlang.org',
+    Handler = self(),
 
-    ok = bootstrap:set_env(connect_regex, "test.*@.*"),
+    Pid = start_link(),
 
-    {ok, EvtPid1} = bootstrap_event:start_link(),
-    {ok, MonPid1} = bootstrap_monitor:start_link(),
+    %% fake nodeup for Node...
+    Pid ! {nodeup, Node, []},
 
-    Handler = #bootstrap_handler{module = ?MODULE, arg = self()},
-    ok = bootstrap_monitor:add(Handler),
+    %% register handler
+    [] = bootstrap_monitor:handlers(),
+    ok = bootstrap_monitor:monitor_nodes(true, Handler),
+    [Handler] = bootstrap_monitor:handlers(),
 
-    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
+    %% handler receives notification for already connected matching node
+    receive ?BOOTSTRAP_UP(Node) -> ok end,
 
-    MonPid1 ! {nodeup, 'test1@host.domain', [{node_type, visible}]},
-    receive {connected, 'test1@host.domain'} -> ok end,
+    %% fake nodedown for Node, also gets delivered
+    Pid ! {nodedown, Node, [{nodedown_reason, expected}]},
+    receive ?BOOTSTRAP_DOWN(Node, expected) -> ok end,
 
-    exit(MonPid1, shutdown),
-    receive {'EXIT', MonPid1, shutdown} -> ok end,
-    exit(EvtPid1, shutdown),
-    receive {'EXIT', EvtPid1, shutdown} -> ok end,
+    %% unregister handler
+    ok = bootstrap_monitor:monitor_nodes(false, Handler),
+    [] = bootstrap_monitor:handlers(),
 
-    {ok, EvtPid2} = bootstrap_event:start_link(),
-    {ok, MonPid2} = bootstrap_monitor:start_link(),
+    ok = stop(Pid).
 
-    {error, {already_registered, ?MODULE}} = bootstrap_monitor:add(Handler),
+automatic_unregistration_test() ->
+    {Handler, HandlerRef} = spawn_monitor(fun() -> receive die -> ok end end),
 
-    MonPid2 ! {nodedown, 'test1@host.domain', [{nodedown_reason, reason}]},
-    receive {disconnected, 'test1@host.domain', reason} -> ok end,
+    Pid = start_link(),
 
-    exit(MonPid2, shutdown),
-    receive {'EXIT', MonPid2, shutdown} -> ok end,
-    exit(EvtPid2, kill),
-    receive {'EXIT', EvtPid2, killed} -> ok end.
+    %% register handler
+    [] = bootstrap_monitor:handlers(),
+    ok = bootstrap_monitor:monitor_nodes(true, Handler),
+    [Handler] = bootstrap_monitor:handlers(),
+
+    %% handler exits
+    Handler ! die,
+    receive {'DOWN', HandlerRef, process, Handler, normal} -> ok end,
+    [] = bootstrap_monitor:handlers(),
+
+    ok = stop(Pid).
 
 %%%=============================================================================
-%%% test behaviour
+%%% Internal functions
 %%%=============================================================================
 
-on_connected(Node, Pid) ->
-    Pid ! {connected, Node},
-    Pid.
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+start_link() ->
+    ok = application:set_env(bootstrap, connect_mode, visible),
+    ok = application:set_env(bootstrap, connect_regex, ".*"),
+    element(2, {ok, _} = bootstrap_monitor:start_link()).
 
-on_disconnected(Node, Reason, Pid) ->
-    Pid ! {disconnected, Node, Reason},
-    Pid.
+%%------------------------------------------------------------------------------
+%% @private
+%%------------------------------------------------------------------------------
+stop(Pid) ->
+    unlink(Pid),
+    Ref = monitor(process, Pid),
+    exit(Pid, shutdown),
+    receive {'DOWN', Ref, process, Pid, shutdown} -> ok end.

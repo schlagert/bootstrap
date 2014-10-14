@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,7 @@ options() -> [{broadcast, true}].
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-addresses() -> addresses(bootstrap:get_env(broadcast_ip, undefined)).
+addresses() -> addresses(bootstrap_lib:get_env(broadcast_ip, undefined)).
 
 %%%=============================================================================
 %%% internal functions

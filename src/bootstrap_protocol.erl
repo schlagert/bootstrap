@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -98,12 +98,12 @@ init([]) ->
     {ok, timer_backoff(
            open_udp_port(
              #state{
-                mode     = bootstrap:get_env(connect_mode, ?CONNECT_MODE),
-                pattern  = bootstrap:pattern(),
-                protocol = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
-                port     = bootstrap:get_env(primary_port, ?PRIMARY_PORT),
-                minimum  = bootstrap:get_env(min_connections, ?CONNECTIONS),
-                timeout  = bootstrap:get_env(ping_timeout, ?PING_TIMEOUT)}))}.
+                mode     = bootstrap_lib:mode(),
+                pattern  = bootstrap_lib:pattern(),
+                protocol = to_mod(bootstrap_lib:get_env(protocol)),
+                port     = bootstrap_lib:get_env(primary_port),
+                minimum  = bootstrap_lib:get_env(min_connections),
+                timeout  = bootstrap_lib:get_env(ping_timeout)}))}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -166,7 +166,7 @@ terminate(_Reason, #state{socket = S}) -> gen_udp:close(S).
 %% @private
 %%------------------------------------------------------------------------------
 open_udp_port(State = #state{socket = undefined, port = PrimaryPort}) ->
-    Ports = bootstrap:get_env(secondary_ports, ?SECONDARY_PORTS),
+    Ports = bootstrap_lib:get_env(secondary_ports),
     {{ok, Socket}, Port} = open_oneof_udp_ports([PrimaryPort | Ports]),
     ?DBG("Using port ~w.~n", [Port]),
     realloc_port_timer(Port, State#state{socket = Socket});
@@ -184,7 +184,7 @@ open_udp_port(State = #state{socket = CurrentSocket, port = PrimaryPort}) ->
 %% @private
 %%------------------------------------------------------------------------------
 open_oneof_udp_ports(Ports) ->
-    ProtocolModule = to_mod(bootstrap:get_env(protocol, ?PROTOCOL)),
+    ProtocolModule = to_mod(bootstrap_lib:get_env(protocol)),
     PortList = [{ProtocolModule, Port} || Port <- Ports],
     lists:foldl(fun try_open/2, {error, no_ports}, PortList).
 
@@ -263,8 +263,8 @@ handle_pong(Node, PingNode, State) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-maybe_ping(State = #state{pattern = P, minimum = M}) ->
-    case M == infinity orelse length(bootstrap:matching(P)) < M of
+maybe_ping(State = #state{pattern = P, mode = Mode, minimum = M}) ->
+    case M == infinity orelse length(bootstrap_lib:matching(P, Mode)) < M of
         true  -> do_ping(State);
         false -> State
     end.
@@ -289,7 +289,7 @@ do_ping(Addresses, State = #state{socket = Socket, port = Port}) ->
 %% @private
 %%------------------------------------------------------------------------------
 maybe_connect(Node, State = #state{mode = Mode, pattern = Pattern}) ->
-    case {Mode, bootstrap:matches(Node, Pattern)} of
+    case {Mode, bootstrap_lib:matches(Node, Pattern)} of
         {visible, true} -> Result = net_kernel:connect(Node);
         {hidden, true}  -> Result = net_kernel:hidden_connect(Node);
         {_, false}      -> Result = skipped

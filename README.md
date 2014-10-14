@@ -139,33 +139,31 @@ cookie__ configured.
 Notifications
 -------------
 
-If the you use `bootstrap` to automatically establish connections between nodes,
+If you use `bootstrap` to automatically establish connections between nodes,
 configuring and starting the application on all nodes is basically all you need.
 However, some use cases may make it necessary to get notified whenever a
 __matching__ connection is established or lost.
 
-For this purpose the `bootstrap` application provides the `bootstrap` behaviour.
-To get notifications about node actions the two functions `on_connected/2` and
-`on_disconnected/3` must be implemented. The implementing handler can then be
-managed using the functions provided in the `bootstrap` module. If you already
-know the `gen_event` behaviour, this will be nothing new for you. All functions
-except for `add_sup_handler/2` basically do the same as the `gen_event`
-equivalents. The only difference between `add_handler/2` and `add_sup_handler/2`
-is that the added handler will automatically be removed when the calling process
-exits. No messages will be sent to the calling process.
+For this purpose the `bootstrap` application provides the `monitor_nodes/1`
+function that manages _bootstrap handler_ registrations (for the calling
+process). _Bootstrap handlers_ will get initial notifications for all
+__matching__ nodes that are currently connected.
 
-`bootstrap` handlers will get initial notifications for all __matching__ nodes
-that are currently connected.
-
-The `net_kernel` module also allows registration of process for node up/down
+The `net_kernel` module also allows registration of processes for node up/down
 messages. However, there are some major advantages when using the `bootstrap`
 notification system:
-* Only notification for __matching__ nodes will be delivered.
-* If using visible connections, the `on_connected/2` callback will be delayed
-  until all global name servers are in sync. This means, in contrary to the
-  `net_kernel` messages, a globally registered process on a newly connected node
-  can be used immediatelly after receiving the corresponding `on_connected/2`
-  callback.
+* Only notifications for __matching__ nodes will be delivered.
+* If using visible connections, the `nodeup` messages will be delayed until all
+  global name servers are in sync. This means, in contrary to the `net_kernel`
+  messages, a globally registered process on a newly connected node can be used
+  immediatelly after receiving the corresponding message.
+
+The `bootstrap` application defines two messages that are sent to handlers using
+ordinary Erlang messaging (corresponding defines can be found in the
+`bootstrap.hrl` header file):
+* `{bootstrap, {nodeup, Node :: atom()}}` matching node got connected
+* `{bootstrap, {nodedown, Node :: atom(), Reason :: term()}}` matching node got
+  disconnected
 
 The `example` directory contains a simple example of a `gen_server` subscribing
 for `bootstrap` notifications. For more information, please refer to the `edoc`
@@ -284,6 +282,9 @@ History
 
 ### Master
 
+* Bootstrap notifications has been switched from `gen_event` to ordinary
+  messages, with an API very similar to the `net_kernel` one
+* Restructure utility code into `_lib` module
 * Fixes #1 Discovery problems when using multiple nodes per host
 
 ### Version 0.0.1

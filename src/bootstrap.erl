@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -16,11 +16,9 @@
 %%% @doc
 %%% Main module of the `bootstrap' application.
 %%%
-%%% This module contains the API for bootstrap handler registration as well as
-%%% the `bootstrap' behaviour definition that must be implemented by handlers.
-%%%
-%%% Furthermore this module implements the application callback as well as the
-%%% top level supervisor of the `bootstrap' application.
+%%% This module contains the API for bootstrap handler registration. Furthermore
+%%% this module implements the application callback as well as the top level
+%%% supervisor of the `bootstrap' application.
 %%% @end
 %%%=============================================================================
 -module(bootstrap).
@@ -29,19 +27,9 @@
 -behaviour(supervisor).
 
 %% API
--export([add_handler/2,
-         add_sup_handler/2,
-         delete_handler/1,
+-export([monitor_nodes/1,
          handlers/0,
          info/0]).
-
-%% Internal API
--export([set_env/2,
-         get_env/2,
-         matches/2,
-         pattern/0,
-         matching/1,
-         get_info/0]).
 
 %% Application callbacks
 -export([start/2,
@@ -50,25 +38,7 @@
 %% supervisor callbacks
 -export([init/1]).
 
--type arg() :: term().
-
--export_type([arg/0]).
-
 -include("bootstrap.hrl").
-
-%%%=============================================================================
-%%% Behaviour
-%%%=============================================================================
-
--callback on_connected(node(), arg()) -> arg().
-%% Called whenever a connection to a node matching the `connect_regex' has been
-%% established. The returned term will be the new handler state. Exceptions
-%% thrown by this function will be discarded.
-
--callback on_disconnected(node(), Reason :: term(), arg()) -> arg().
-%% Called whenever a connection to a node matching the `connect_regex' has been
-%% lost. The returned term will be the new handler state. Exceptions thrown by
-%% this function will be discarded.
 
 %%%=============================================================================
 %%% API
@@ -76,51 +46,36 @@
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% Adds a new bootstrap handler module. The second argument is the initial
-%% handler state passed into the behaviour callbacks. A specific module can only
-%% be added once per time. If the same module was already added before it must
-%% be deleted in advance. There's no limit on the number of different added
-%% handler modules. Callback processing is sequential and in order of addition.
-%% To remove a bootstrap handler {@link delete_handler/1} must be called.
+%% Similar to {@link net_kernel:monitor_nodes/1}, signalling only mactching
+%% nodes. The calling process subscribes or unsubscribes to node status change
+%% messages. A nodeup message is delivered to all subscribing processes when a
+%% new matching node is connected, and a nodedown message is delivered when a
+%% matching node gets disconnected.
+%%
+%% In contrast to `net_kernel' nodeup messages for already connected matching
+%% nodes will also be delivered to newly subscribing processes.
+%%
+%% If `Flag' is `true', a new subscription is started. If `Flag' is `false' a
+%% previous subscription is stopped. There's no limit on the number of different
+%% added handler processes. Subscribing an already subscribed process has no
+%% effect. If a handler process exits it will automatically be unsubscribed.
+%%
+%% Message format is (also defined in bootstrap.hrl):
+%% * `{bootstrap, {nodeup, Node :: atom()}}'
+%% * `{bootstrap, {nodedown, Node :: atom(), Reason :: term()}}'
+%%
 %% @end
 %%------------------------------------------------------------------------------
--spec add_handler(module(), arg()) -> ok | {error, term()}.
-add_handler(Module, Arg) ->
-    Handler = #bootstrap_handler{module = Module, arg = Arg},
-    bootstrap_monitor:add(Handler).
+-spec monitor_nodes(boolean()) -> ok.
+monitor_nodes(Flag) -> bootstrap_monitor:monitor_nodes(Flag, self()).
 
 %%------------------------------------------------------------------------------
 %% @doc
-%% This function works much like {@link add_handler/2} but additionally the
-%% calling process will be associated with the bootstrap handler. This means
-%% that the calling process will be monitored and the corresponding handler
-%% will be removed as soon as the associated process exits. Alternatively the
-%% handler can be removed manually using {@link delete_handler/1}.
+%% Return a list of all registered bootstrap handler processes.
 %% @end
 %%------------------------------------------------------------------------------
--spec add_sup_handler(module(), arg()) -> ok | {error, term()}.
-add_sup_handler(Module, Arg) ->
-    Handler = #bootstrap_handler{pid = self(), module = Module, arg = Arg},
-    bootstrap_monitor:add(Handler).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Deletes a bootstrap handler module. Calling this function with a module that
-%% was not added before is not considered an error.
-%% @end
-%%------------------------------------------------------------------------------
--spec delete_handler(module()) -> ok.
-delete_handler(Module) ->
-    bootstrap_event:delete(Module),
-    ok.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% Return a list of all registered bootstrap handlers.
-%% @end
-%%------------------------------------------------------------------------------
--spec handlers() -> [module()].
-handlers() -> bootstrap_event:list().
+-spec handlers() -> [pid()].
+handlers() -> bootstrap_monitor:handlers().
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -129,59 +84,12 @@ handlers() -> bootstrap_event:list().
 %%------------------------------------------------------------------------------
 -spec info() -> ok.
 info() ->
-    %% TODO this should make use if rpc:multicall/X, but currently there's a
-    %% problem handling java nodes
-    [io:format("~s:~n  Connections: ~w~n  Handlers:    ~w~n", [M, Cs, Hs])
+    %% TODO this should make use of rpc:multicall/X, but currently there's a
+    %% problem which causes multicall to block forever when querying a java node
+    [?INFO("~s:~n  Connections: ~w~n  Handlers:    ~w~n", [M, Cs, Hs])
      || N <- [node() | nodes(connected)],
-        {ok, M, Cs, Hs} <- [rpc:call(N, ?MODULE, get_info, [], 1000)]],
+        {ok, M, Cs, Hs} <- [rpc:call(N, bootstrap_lib, get_info, [], 1000)]],
     ok.
-
-%%%=============================================================================
-%%% Internal API
-%%%=============================================================================
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec set_env(atom(), term()) -> ok | {error, term()}.
-set_env(Key, Value) -> application:set_env(?MODULE, Key, Value).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec get_env(atom(), term()) -> term().
-get_env(Key, Default) ->
-    case application:get_env(?MODULE, Key) of
-        {ok, Value} -> Value;
-        _           -> Default
-    end.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec matches(node(), re:mp()) -> boolean().
-matches(Node, Pattern) ->
-    re:run(atom_to_list(Node), Pattern, [{capture, none}]) =:= match.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec pattern() -> re:mp().
-pattern() ->
-    element(2, {ok, _} = re:compile(get_env(connect_regex, ?CONNECT_REGEX))).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec matching(re:mp()) -> [node()].
-matching(Pattern) ->
-    [Node || Node <- [node() | nodes(connected)], matches(Node, Pattern)].
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
--spec get_info() -> {ok, node(), [node()], [module()]}.
-get_info() -> {ok, node(), matching(pattern()), handlers()}.
 
 %%%=============================================================================
 %%% Application callbacks
@@ -205,10 +113,11 @@ stop(_State) -> ok.
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
-    {ok, {{one_for_one, 5, 10},
-          [event_mgr(bootstrap_event),
-           server(bootstrap_monitor),
-           server(bootstrap_protocol)]}}.
+    Specs = [
+             spec(bootstrap_monitor),
+             spec(bootstrap_protocol)
+            ],
+    {ok, {{one_for_one, 0, 1}, Specs}}.
 
 %%%=============================================================================
 %%% internal functions
@@ -217,14 +126,4 @@ init([]) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-server(M) -> spec(M, [M]).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-event_mgr(M) -> spec(M, dynamic).
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-spec(M, Ms) -> {M, {M, start_link, []}, permanent, brutal_kill, worker, Ms}.
+spec(M) -> {M, {M, start_link, []}, permanent, brutal_kill, worker, [M]}.

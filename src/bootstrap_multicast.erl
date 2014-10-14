@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -35,12 +35,12 @@
 %% @private
 %%------------------------------------------------------------------------------
 options() ->
-    Addr = bootstrap:get_env(multicast_ip, ?MULTICAST_IP),
+    Addr = bootstrap_lib:get_env(multicast_ip),
     [{add_membership, {Addr, {0, 0, 0, 0}}},
-     {multicast_ttl, bootstrap:get_env(multicast_ttl, ?MULTICAST_TTL)},
+     {multicast_ttl, bootstrap_lib:get_env(multicast_ttl)},
      {multicast_loop, true}].
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-addresses() -> [bootstrap:get_env(multicast_ip, ?MULTICAST_IP)].
+addresses() -> [bootstrap_lib:get_env(multicast_ip)].

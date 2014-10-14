@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %%%=============================================================================
-%%% Copyright 2013, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -24,9 +24,6 @@
 
 %% API
 -export([main/1]).
-
-%% bootstrap callbacks
--export([on_connected/2, on_disconnected/3]).
 
 -define(LOG(Fmt, Args), io:format(Fmt, Args)).
 
@@ -56,11 +53,13 @@ main([NodeName, Cookie, Regex, Mode, Protocol]) ->
     application:start(sasl),
     application:start(crypto),
     ok = application:load(bootstrap),
-    ok = bootstrap:set_env(connect_regex, Regex),
-    ok = bootstrap:set_env(connect_mode, list_to_existing_atom(Mode)),
-    ok = bootstrap:set_env(protocol, list_to_existing_atom(Protocol)),
+    ok = application:set_env(bootstrap, connect_regex, Regex),
+    ModeAtom = list_to_existing_atom(Mode),
+    ok = application:set_env(bootstrap, connect_mode, ModeAtom),
+    ProtocolAtom = list_to_existing_atom(Protocol),
+    ok = application:set_env(bootstrap, protocol, ProtocolAtom),
     ok = application:start(bootstrap),
-    ok = bootstrap:add_sup_handler(?MODULE, self()),
+    ok = bootstrap:monitor_nodes(true),
     main_loop();
 main(_) ->
     io:format(
@@ -75,24 +74,6 @@ main(_) ->
       [escript:script_name()]).
 
 %%%=============================================================================
-%%% bootstrap callbacks
-%%%=============================================================================
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-on_connected(Node, Pid) ->
-    Pid ! {connected, Node},
-    Pid.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-on_disconnected(Node, Reason, Pid) ->
-    Pid ! {disconnected, Node, Reason},
-    Pid.
-
-%%%=============================================================================
 %%% internal functions
 %%%=============================================================================
 
@@ -101,9 +82,9 @@ on_disconnected(Node, Reason, Pid) ->
 %%------------------------------------------------------------------------------
 main_loop() ->
     receive
-        {connected, Node} ->
+        {bootstrap, {nodeup, Node}} ->
             ?LOG("Node ~s connected.~n", [Node]);
-        {disconnected, Node, Reason} ->
+        {bootstrap, {nodedown, Node, Reason}} ->
             ?LOG("Node ~s disconnected with reason ~p.~n", [Node, Reason])
     end,
     io:format("~n~.80c~n", [$=]),
