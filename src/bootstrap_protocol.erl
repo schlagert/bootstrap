@@ -290,8 +290,8 @@ do_ping(Addresses, State = #state{socket = Socket, port = Port}) ->
 %%------------------------------------------------------------------------------
 maybe_connect(Node, State = #state{mode = Mode, pattern = Pattern}) ->
     case {Mode, bootstrap_lib:matches(Node, Pattern)} of
-        {visible, true} -> Result = net_kernel:connect(Node);
-        {hidden, true}  -> Result = net_kernel:hidden_connect(Node);
+        {visible, true} -> Result = net_kernel:connect_node(Node);
+        {hidden, true}  -> Result = net_kernel:hidden_connect_node(Node);
         {_, false}      -> Result = skipped
     end,
     case Result of

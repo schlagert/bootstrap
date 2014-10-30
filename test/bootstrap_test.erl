@@ -53,7 +53,7 @@ connect(Protocol) ->
     %% Now we break the connections between the slaves manually (connections to
     %% the master can not be broken, unless you want the slave to exit)
     Separate = fun() ->
-                       true = net_kernel:connect(Slave2),
+                       true = net_kernel:connect_node(Slave2),
                        true = net_kernel:disconnect(Slave2)
                end,
     ok = slave_execute(Slave1, Separate),
