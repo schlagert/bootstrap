@@ -282,6 +282,7 @@ History
 
 ### Master
 
+* Add new API to explicitly activate/deactivate discovery on a node
 * Bootstrap notifications has been switched from `gen_event` to ordinary
   messages, with an API very similar to the `net_kernel` one
 * Restructure utility code into `_lib` module

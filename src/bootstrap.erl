@@ -29,6 +29,8 @@
 %% API
 -export([monitor_nodes/1,
          handlers/0,
+         deactivate/0,
+         reactivate/0,
          info/0]).
 
 %% Application callbacks
@@ -79,6 +81,28 @@ handlers() -> bootstrap_monitor:handlers().
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% Deactivates bootstrap discovery on this node. This means that this node will
+%% not (actively) take part in the discovery process any more. However, the
+%% application will still be running and notifications for matching nodes will
+%% still be delivered in case other active instances connect to this node
+%% (passive mode). All network ports aquired by the application will be
+%% released. Discovery can be restarted at any time using {@link reactivate/0}.
+%% @end
+%%------------------------------------------------------------------------------
+-spec deactivate() -> ok | {error, term()}.
+deactivate() -> supervisor:terminate_child(?MODULE, bootstrap_protocol).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% Reactivates bootstrap discovery on this node. This only works when the
+%% application has been deactivated before using {@link deactivate/0}.
+%% @end
+%%------------------------------------------------------------------------------
+-spec reactivate() -> {ok, pid()} | {error, term()}.
+reactivate() -> supervisor:restart_child(?MODULE, bootstrap_protocol).
+
+%%------------------------------------------------------------------------------
+%% @doc
 %% Print information about the bootstrap instances on all connected nodes.
 %% @end
 %%------------------------------------------------------------------------------
@@ -98,7 +122,8 @@ info() ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-start(_StartType, _StartArgs) -> supervisor:start_link(?MODULE, []).
+start(_StartType, _StartArgs) ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %%------------------------------------------------------------------------------
 %% @private

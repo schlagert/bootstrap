@@ -19,6 +19,7 @@
   {vsn, "0.0.2"},
   {registered,
    [
+    bootstrap,
     bootstrap_monitor
    ]},
   {applications,
