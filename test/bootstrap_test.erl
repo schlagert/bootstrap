@@ -120,7 +120,7 @@ setup_apps(Protocol) ->
 %%------------------------------------------------------------------------------
 distribute(Name) ->
     os:cmd("epmd -daemon"),
-    case net_kernel:start([Name]) of
+    case net_kernel:start([Name, shortnames]) of
         {ok, _}                       -> {ok, node()};
         {error, {already_started, _}} -> {ok, node()};
         Error                         -> Error
