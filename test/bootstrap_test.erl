@@ -24,16 +24,16 @@
 %%%=============================================================================
 
 broadcast_test_() ->
-    {timeout, 10, {spawn, fun() -> connect(broadcast) end}}.
+    {timeout, 30, {spawn, fun() -> connect(broadcast) end}}.
 
 multicast_test_() ->
-    {timeout, 10, {spawn, fun() -> connect(multicast) end}}.
+    {timeout, 30, {spawn, fun() -> connect(multicast) end}}.
 
 connect(Protocol) ->
     process_flag(trap_exit, true),
 
     %% setup master node, master will not participate in bootstrap process
-    {ok, Master} = distribute(test0),
+    {ok, Master} = distribute('test0@localhost'),
 
     %% setup slave nodes with bootstrap running
     {ok, Slave1} = slave_setup(test1, Protocol),
@@ -131,7 +131,7 @@ distribute(Name) ->
 %% Start a slave node and setup its environment (code path, applications, ...).
 %%------------------------------------------------------------------------------
 slave_setup(Name, Protocol) ->
-    {ok, Node} = slave:start_link(hostname(), Name),
+    {ok, Node} = slave:start_link(localhost, Name),
     true = lists:member(Node, nodes()),
     slave_setup_env(Node, Protocol),
     {ok, Node}.
@@ -156,8 +156,3 @@ slave_execute(Node, Fun) ->
         {'EXIT', Pid, {shutdown, Result}} -> {ok, Result};
         {'DOWN', Pid, Reason}             -> {error, Reason}
     end.
-
-%%------------------------------------------------------------------------------
-%% @private
-%%------------------------------------------------------------------------------
-hostname() -> list_to_atom(element(2, inet:gethostname())).
