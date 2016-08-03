@@ -131,19 +131,13 @@ distribute(Name) ->
 %% Start a slave node and setup its environment (code path, applications, ...).
 %%------------------------------------------------------------------------------
 slave_setup(Name, Protocol) ->
-    {ok, Node} = slave:start_link(localhost, Name),
+    Arg = string:join(["-pa " ++ P || P <- code:get_path()], " "),
+    {ok, Node} = slave:start_link(localhost, Name, Arg),
+    %% Make sure slave node started correctly and is now connected
     true = lists:member(Node, nodes()),
-    slave_setup_env(Node, Protocol),
+    %% Start the needed applications
+    ok = slave_execute(Node, fun() -> setup_apps(Protocol) end),
     {ok, Node}.
-
-%%------------------------------------------------------------------------------
-%% @private
-%% Setup the slave node environment (code path, applications, ...).
-%%------------------------------------------------------------------------------
-slave_setup_env(Node, Protocol) ->
-    Paths = code:get_path(),
-    ok = slave_execute(Node, fun() -> [code:add_patha(P) || P <- Paths] end),
-    ok = slave_execute(Node, fun() -> setup_apps(Protocol) end).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -154,5 +148,5 @@ slave_execute(Node, Fun) ->
     receive
         {'EXIT', Pid, normal}             -> ok;
         {'EXIT', Pid, {shutdown, Result}} -> {ok, Result};
-        {'DOWN', Pid, Reason}             -> {error, Reason}
+        {'EXIT', Pid, Reason}             -> {error, Reason}
     end.

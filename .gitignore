@@ -1,8 +1,10 @@
+*.app
+*.beam
+*.o
+*.plt
 .eunit
 .rebar
+_build
 deps
 doc
-*.o
-*.beam
-*.plt
-*.app
+ebin
