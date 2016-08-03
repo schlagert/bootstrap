@@ -282,6 +282,12 @@ History
 
 ### Master
 
+* No difference to latest tag
+
+### Version 0.0.2
+
+* `bootstrap` is now available via [hex.pm](https://hex.pm/packages/bootstrap)
+* Make project compatible to rebar3
 * Add new API to explicitly activate/deactivate discovery on a node
 * Bootstrap notifications has been switched from `gen_event` to ordinary
   messages, with an API very similar to the `net_kernel` one
