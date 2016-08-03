@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013-2014, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2016, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%=============================================================================
 {application, bootstrap,
- [{description, "A simple, yet powerful cluster bootstrapping application."},
-  {id, "com.github.schlagert"},
+ [
+  {description, "A simple, yet powerful cluster bootstrapping application."},
   {vsn, "0.0.2"},
   {registered,
    [
@@ -41,4 +41,8 @@
     {ping_timeout, 10000},
     {multicast_ip, {239, 192, 0, 1}},
     {multicast_ttl, 1}
-   ]}]}.
+   ]},
+  {maintainers, ["Tobias Schlager"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/schlagert/bootstrap"}]}
+ ]}.
