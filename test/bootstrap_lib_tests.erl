@@ -14,7 +14,7 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%=============================================================================
 
--module(bootstrap_lib_test).
+-module(bootstrap_lib_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("bootstrap/include/bootstrap.hrl").
