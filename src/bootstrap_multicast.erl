@@ -36,7 +36,8 @@
 %%------------------------------------------------------------------------------
 options() ->
     Addr = bootstrap_lib:get_env(multicast_ip),
-    [{add_membership, {Addr, {0, 0, 0, 0}}},
+    Iface = bootstrap_lib:get_env(multicast_iface, {0, 0, 0, 0}),
+    [{add_membership, {Addr, Iface}},
      {multicast_ttl, bootstrap_lib:get_env(multicast_ttl)},
      {multicast_loop, true}].
 

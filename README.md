@@ -125,6 +125,12 @@ environment:
   Specifies the multicast address to be used for node discovery when using
   the `multicast` protocol. Default is `{239, 192, 0, 1}`.
 
+* `{multicast_iface, MulticastAddr :: inet:ip4_address()}`
+
+  The address of the interface to listen on for multicast packets.
+  Default is `{0, 0, 0, 0}`, which mostly works unless you're
+  multi-homed.  See `IP_ADD_MEMBERSHIP` in the `ip(7)` man page.
+
 * `{multicast_ttl, non_neg_integer()}`
 
   Specifies the time-to-live (TTL) of outgoing multicast packets. When setting
