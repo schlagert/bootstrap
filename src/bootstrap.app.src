@@ -40,6 +40,7 @@
     {secondary_ports, [50338, 50339]},
     {ping_timeout, 10000},
     {multicast_ip, {239, 192, 0, 1}},
+    {multicast_iface, {0, 0, 0, 0}},
     {multicast_ttl, 1}
    ]},
   {maintainers, ["Tobias Schlager"]},
