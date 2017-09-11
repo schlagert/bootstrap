@@ -294,6 +294,10 @@ History
 
 ### Master
 
+* No difference to latest tag
+
+### Version 1.0.0
+
 * Remove all warnings of dialyzer/compiler on OTP 19 and above
 * Make the global name synchronization configurable
 * Add support to run `bootstrap` in docker containers (see #4, thanks to @noelbk)
