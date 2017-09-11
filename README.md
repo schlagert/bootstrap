@@ -137,6 +137,12 @@ environment:
   the TTL to `1` all multicast packets are limited to the local network. Default
   is `1`.
 
+* `{no_global_sync, boolean()}`
+
+  Allows skipping the call to `global:sync/0` when a new matching node joins the
+  cluster (if set to `true`). This is useful, if the global name synchronization
+  is either handled by yourself or not needed at all. Default is `false`.
+
 The default configuration can be used to form an unbounded, mesh-connected
 Erlang cluster utilizing the UDP broadcast protocol. Please note that to be able
 to connect to other Erlang nodes, these nodes __must have the same Erlang
@@ -288,7 +294,9 @@ History
 
 ### Master
 
-* No difference to latest tag
+* Remove all warnings of dialyzer/compiler on OTP 19 and above
+* Make the global name synchronization configurable
+* Add support to run `bootstrap` in docker containers (see #4, thanks to @noelbk)
 
 ### Version 0.0.2
 

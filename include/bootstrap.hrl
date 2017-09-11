@@ -21,18 +21,18 @@
 %%% Defines related to application internal logging.
 %%%=============================================================================
 
--define(ERR(Fmt, Args), error_logger:error_msg(Fmt, Args)).
+-define(ERR(Fmt, Args), ok = error_logger:error_msg(Fmt, Args)).
 
 -ifdef(DEBUG).
--define(DBG(Fmt, Args), io:format(standard_error, Fmt, Args)).
+-define(DBG(Fmt, Args), ok = io:format(standard_error, Fmt, Args)).
 -else.
 -define(DBG(Fmt, Args), Fmt = Fmt, Args = Args, ok).
 -endif.
 
 -ifdef(TEST).
--define(INFO(Fmt, Args), io:format(standard_error, Fmt, Args)).
+-define(INFO(Fmt, Args), ok = io:format(standard_error, Fmt, Args)).
 -else.
--define(INFO(Fmt, Args), io:format(Fmt, Args)).
+-define(INFO(Fmt, Args), ok = io:format(Fmt, Args)).
 -endif.
 
 %%%=============================================================================
