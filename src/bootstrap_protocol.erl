@@ -84,9 +84,9 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
           mode     :: visible | hidden,
           pattern  :: re:mp(),
           protocol :: module(),
-          port     :: inet:port_number(),
-          socket   :: inet:socket(),
-          timer    :: reference(),
+          port     :: -1 | inet:port_number(),
+          socket   :: inet:socket() | undefined,
+          timer    :: reference() | undefined,
           minimum  :: non_neg_integer() | infinity,
           timeout  :: non_neg_integer()}).
 
