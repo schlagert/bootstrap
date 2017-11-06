@@ -193,13 +193,13 @@ report(Handlers, visible, Node, up) ->
     %% This may block the whole server for some time. However, for the sake of
     %% correctness, we still must do it this way, because the last thing we
     %% want is disordered up/down messages from a node.
-    case bootstrap_lib:get_env(no_global_sync, false) of
-        false ->
-            Time = element(1, timer:tc(global, sync, [])) div 1000,
-            ?INFO("Global synchronization took ~pms.~n", [Time]);
-        true ->
-            ok
-    end,
+    _ = case bootstrap_lib:get_env(no_global_sync, false) of
+            false ->
+                Time = element(1, timer:tc(global, sync, [])) div 1000,
+                ?INFO("Global synchronization took ~pms.~n", [Time]);
+            true ->
+                ok
+        end,
     [Handler ! ?BOOTSTRAP_UP(Node) || Handler <- Handlers];
 report(Handlers, hidden, Node, up) ->
     [Handler ! ?BOOTSTRAP_UP(Node) || Handler <- Handlers];

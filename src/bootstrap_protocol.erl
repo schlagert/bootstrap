@@ -214,7 +214,7 @@ timer_backoff(State = #state{timeout = Timeout}) ->
 %% A timer scheduling a ping with a certain, variable time.
 %%------------------------------------------------------------------------------
 timer_periodic(State = #state{timeout = Timeout}) ->
-    ping_timer(max(0, Timeout - 1000) + crypto:rand_uniform(0, 1000), State).
+    ping_timer(max(0, Timeout - 1000) + rand:uniform(1000), State).
 
 %%------------------------------------------------------------------------------
 %% @private
