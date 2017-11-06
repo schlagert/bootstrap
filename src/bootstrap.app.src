@@ -26,8 +26,7 @@
    [
     kernel,
     stdlib,
-    sasl,
-    crypto
+    sasl
    ]},
   {mod, {bootstrap, []}},
   {env,

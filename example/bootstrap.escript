@@ -51,7 +51,6 @@ main([NodeName, Cookie, Regex, Mode, Protocol]) ->
     application:load(sasl),
     ok = application:set_env(sasl, sasl_error_logger, false),
     application:start(sasl),
-    application:start(crypto),
     ok = application:load(bootstrap),
     ok = application:set_env(bootstrap, connect_regex, Regex),
     ModeAtom = list_to_existing_atom(Mode),

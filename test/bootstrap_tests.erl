@@ -104,7 +104,6 @@ setup_apps(Protocol) ->
     application:load(sasl),
     application:set_env(sasl, sasl_error_logger, false),
     application:start(sasl),
-    application:start(crypto),
     application:load(bootstrap),
     application:set_env(bootstrap, primary_port, 40001),
     application:set_env(bootstrap, secondary_ports, [40002]),
