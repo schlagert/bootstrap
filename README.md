@@ -292,7 +292,9 @@ History
 
 ### Master
 
-* No difference to latest tag
+* Remove support for OTP 17
+* Remove deprecated function calls on newer OTP versions, this also removes the
+  dependency to the `crypto` application
 
 ### Version 1.0.0
 
