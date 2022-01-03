@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/schlagert/bootstrap.png?branch=master)](https://travis-ci.org/schlagert/bootstrap)
-
 bootstrap
 =========
 
