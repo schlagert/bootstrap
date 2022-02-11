@@ -290,7 +290,7 @@ following:
 History
 -------
 
-### Master
+### Version 1.1.0
 
 * Remove support for OTP 17
 * Remove deprecated function calls on newer OTP versions, this also removes the
