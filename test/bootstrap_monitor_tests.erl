@@ -52,7 +52,9 @@ nodeup_after_monitor_test() ->
 
     %% fake nodeup for Node... handler receives notification
     Pid ! {nodeup, Node, []},
-    receive ?BOOTSTRAP_UP(Node) -> ok end,
+    receive
+        ?BOOTSTRAP_UP(Node) -> ok
+    end,
 
     %% unregister handler
     ok = bootstrap_monitor:monitor_nodes(false, Handler),
@@ -62,8 +64,7 @@ nodeup_after_monitor_test() ->
     Pid ! {nodedown, Node, [{nodedown_reason, expected}]},
     receive
         Msg = ?BOOTSTRAP_DOWN(Node, _) -> throw({unexpected, Msg})
-    after
-        100 -> ok
+    after 100 -> ok
     end,
 
     ok = stop(Pid).
@@ -83,11 +84,15 @@ nodeup_before_monitor_test() ->
     [Handler] = bootstrap_monitor:handlers(),
 
     %% handler receives notification for already connected matching node
-    receive ?BOOTSTRAP_UP(Node) -> ok end,
+    receive
+        ?BOOTSTRAP_UP(Node) -> ok
+    end,
 
     %% fake nodedown for Node, also gets delivered
     Pid ! {nodedown, Node, [{nodedown_reason, expected}]},
-    receive ?BOOTSTRAP_DOWN(Node, expected) -> ok end,
+    receive
+        ?BOOTSTRAP_DOWN(Node, expected) -> ok
+    end,
 
     %% unregister handler
     ok = bootstrap_monitor:monitor_nodes(false, Handler),
@@ -96,7 +101,11 @@ nodeup_before_monitor_test() ->
     ok = stop(Pid).
 
 automatic_unregistration_test() ->
-    {Handler, HandlerRef} = spawn_monitor(fun() -> receive die -> ok end end),
+    {Handler, HandlerRef} = spawn_monitor(fun() ->
+        receive
+            die -> ok
+        end
+    end),
 
     Pid = start_link(),
 
@@ -107,7 +116,9 @@ automatic_unregistration_test() ->
 
     %% handler exits
     Handler ! die,
-    receive {'DOWN', HandlerRef, process, Handler, normal} -> ok end,
+    receive
+        {'DOWN', HandlerRef, process, Handler, normal} -> ok
+    end,
     [] = bootstrap_monitor:handlers(),
 
     ok = stop(Pid).
@@ -131,4 +142,6 @@ stop(Pid) ->
     unlink(Pid),
     Ref = monitor(process, Pid),
     exit(Pid, shutdown),
-    receive {'DOWN', Ref, process, Pid, shutdown} -> ok end.
+    receive
+        {'DOWN', Ref, process, Pid, shutdown} -> ok
+    end.

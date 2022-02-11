@@ -14,11 +14,11 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%=============================================================================
 {"1.1.0",
- [
-  {"1.0.1", [{restart_application, bootstrap}]},
-  {"1.0.0", [{restart_application, bootstrap}]}
- ],
- [
-  {"1.0.1", [{restart_application, bootstrap}]},
-  {"1.0.0", [{restart_application, bootstrap}]}
- ]}.
+    [
+        {"1.0.1", [{restart_application, bootstrap}]},
+        {"1.0.0", [{restart_application, bootstrap}]}
+    ],
+    [
+        {"1.0.1", [{restart_application, bootstrap}]},
+        {"1.0.0", [{restart_application, bootstrap}]}
+    ]}.

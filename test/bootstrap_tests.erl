@@ -43,24 +43,46 @@ connect(Protocol) ->
     %% this gets reported by the bootstrap handlers on both slaves.
     spawn(Slave1, handler(self())),
     spawn(Slave2, handler(self())),
-    receive {Slave1, ?BOOTSTRAP_UP(Master)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave1, ?BOOTSTRAP_UP(Slave1)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave1, ?BOOTSTRAP_UP(Slave2)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave2, ?BOOTSTRAP_UP(Master)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave2, ?BOOTSTRAP_UP(Slave1)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave2, ?BOOTSTRAP_UP(Slave2)} -> ok after 5000 -> throw(fail) end,
+    receive
+        {Slave1, ?BOOTSTRAP_UP(Master)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave1, ?BOOTSTRAP_UP(Slave1)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave1, ?BOOTSTRAP_UP(Slave2)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave2, ?BOOTSTRAP_UP(Master)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave2, ?BOOTSTRAP_UP(Slave1)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave2, ?BOOTSTRAP_UP(Slave2)} -> ok
+    after 5000 -> throw(fail)
+    end,
 
     %% Now we break the connections between the slaves manually (connections to
     %% the master can not be broken, unless you want the slave to exit)
     Separate = fun() ->
-                       true = net_kernel:connect_node(Slave2),
-                       true = net_kernel:disconnect(Slave2)
-               end,
+        true = net_kernel:connect_node(Slave2),
+        true = net_kernel:disconnect(Slave2)
+    end,
     ok = slave_execute(Slave1, Separate),
-    receive {Slave1, ?BOOTSTRAP_DOWN(Slave2, disconnect)} -> ok
-    after 5000 -> throw(fail) end,
-    receive {Slave2, ?BOOTSTRAP_DOWN(Slave1, connection_closed)} -> ok
-    after 5000 -> throw(fail) end,
+    receive
+        {Slave1, ?BOOTSTRAP_DOWN(Slave2, disconnect)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave2, ?BOOTSTRAP_DOWN(Slave1, connection_closed)} -> ok
+    after 5000 -> throw(fail)
+    end,
 
     Nodes = fun() -> exit({shutdown, [node() | nodes()]}) end,
     {ok, Nodes1AfterDisconnect} = slave_execute(Slave1, Nodes),
@@ -69,13 +91,21 @@ connect(Protocol) ->
     ?assertEqual([Master, Slave2], lists:usort(Nodes2AfterDisconnect)),
 
     %% Now we do nothing and wait for recovery powered by bootstrap
-    receive {Slave1, ?BOOTSTRAP_UP(Slave2)} -> ok after 5000 -> throw(fail) end,
-    receive {Slave2, ?BOOTSTRAP_UP(Slave1)} -> ok after 5000 -> throw(fail) end,
+    receive
+        {Slave1, ?BOOTSTRAP_UP(Slave2)} -> ok
+    after 5000 -> throw(fail)
+    end,
+    receive
+        {Slave2, ?BOOTSTRAP_UP(Slave1)} -> ok
+    after 5000 -> throw(fail)
+    end,
 
     {ok, Nodes1AfterReconnect} = slave_execute(Slave1, Nodes),
     {ok, Nodes2AfterReconnect} = slave_execute(Slave2, Nodes),
-    ?assertEqual(lists:usort(Nodes1AfterReconnect),
-                 lists:usort(Nodes2AfterReconnect)),
+    ?assertEqual(
+        lists:usort(Nodes1AfterReconnect),
+        lists:usort(Nodes2AfterReconnect)
+    ),
     ?assertEqual([Master, Slave1, Slave2], lists:usort(Nodes1AfterReconnect)).
 
 %%%=============================================================================
@@ -87,8 +117,8 @@ connect(Protocol) ->
 %%------------------------------------------------------------------------------
 handler(ParentHandler) ->
     fun() ->
-            ok = bootstrap:monitor_nodes(true),
-            handler_loop(ParentHandler)
+        ok = bootstrap:monitor_nodes(true),
+        handler_loop(ParentHandler)
     end.
 handler_loop(ParentHandler) ->
     receive
@@ -120,9 +150,9 @@ setup_apps(Protocol) ->
 distribute(Name) ->
     os:cmd("epmd -daemon"),
     case net_kernel:start([Name, shortnames]) of
-        {ok, _}                       -> {ok, node()};
+        {ok, _} -> {ok, node()};
         {error, {already_started, _}} -> {ok, node()};
-        Error                         -> Error
+        Error -> Error
     end.
 
 %%------------------------------------------------------------------------------
@@ -145,7 +175,7 @@ slave_setup(Name, Protocol) ->
 slave_execute(Node, Fun) ->
     Pid = spawn_link(Node, Fun),
     receive
-        {'EXIT', Pid, normal}             -> ok;
+        {'EXIT', Pid, normal} -> ok;
         {'EXIT', Pid, {shutdown, Result}} -> {ok, Result};
-        {'EXIT', Pid, Reason}             -> {error, Reason}
+        {'EXIT', Pid, Reason} -> {error, Reason}
     end.

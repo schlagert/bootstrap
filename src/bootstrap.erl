@@ -27,15 +27,19 @@
 -behaviour(supervisor).
 
 %% API
--export([monitor_nodes/1,
-         handlers/0,
-         deactivate/0,
-         reactivate/0,
-         info/0]).
+-export([
+    monitor_nodes/1,
+    handlers/0,
+    deactivate/0,
+    reactivate/0,
+    info/0
+]).
 
 %% Application callbacks
--export([start/2,
-         stop/1]).
+-export([
+    start/2,
+    stop/1
+]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -110,9 +114,11 @@ reactivate() -> supervisor:restart_child(?MODULE, bootstrap_protocol).
 info() ->
     %% TODO this should make use of rpc:multicall/X, but currently there's a
     %% problem which causes multicall to block forever when querying a java node
-    [?INFO("~s:~n  Connections: ~w~n  Handlers:    ~w~n", [M, Cs, Hs])
+    [
+        ?INFO("~s:~n  Connections: ~w~n  Handlers:    ~w~n", [M, Cs, Hs])
      || N <- [node() | nodes(connected)],
-        {ok, M, Cs, Hs} <- [rpc:call(N, bootstrap_lib, get_info, [], 1000)]],
+        {ok, M, Cs, Hs} <- [rpc:call(N, bootstrap_lib, get_info, [], 1000)]
+    ],
     ok.
 
 %%%=============================================================================
@@ -139,9 +145,9 @@ stop(_State) -> ok.
 %%------------------------------------------------------------------------------
 init([]) ->
     Specs = [
-             spec(bootstrap_monitor),
-             spec(bootstrap_protocol)
-            ],
+        spec(bootstrap_monitor),
+        spec(bootstrap_protocol)
+    ],
     {ok, {{one_for_one, 0, 1}, Specs}}.
 
 %%%=============================================================================

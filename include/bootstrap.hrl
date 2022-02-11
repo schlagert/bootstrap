@@ -39,7 +39,7 @@
 %%% Define messages sent from bootstrap to bootstrap handlers.
 %%%=============================================================================
 
--define(BOOTSTRAP_UP(Node),           {bootstrap, {nodeup, Node}}).
+-define(BOOTSTRAP_UP(Node), {bootstrap, {nodeup, Node}}).
 -define(BOOTSTRAP_DOWN(Node, Reason), {bootstrap, {nodedown, Node, Reason}}).
 
 %%%=============================================================================
@@ -47,7 +47,10 @@
 %%% network).
 %%%=============================================================================
 
--define(BOOTSTRAP_PING(PingNode, PingAddr), {bootstrap, {ping, PingNode, PingAddr}}).
--define(BOOTSTRAP_PONG(Node, PingNode),     {bootstrap, {pong, Node, PingNode}}).
+-define(BOOTSTRAP_PING(PingNode, PingAddr),
+    {bootstrap, {ping, PingNode, PingAddr}}
+).
+-define(BOOTSTRAP_PONG(Node, PingNode), {bootstrap, {pong, Node, PingNode}}).
 
--endif. %% bootstrap_hrl_
+%% bootstrap_hrl_
+-endif.

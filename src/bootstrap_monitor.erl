@@ -23,17 +23,21 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0,
-         monitor_nodes/2,
-         handlers/0]).
+-export([
+    start_link/0,
+    monitor_nodes/2,
+    handlers/0
+]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_cast/2,
-         handle_call/3,
-         handle_info/2,
-         code_change/3,
-         terminate/2]).
+-export([
+    init/1,
+    handle_cast/2,
+    handle_call/3,
+    handle_info/2,
+    code_change/3,
+    terminate/2
+]).
 
 -include("bootstrap.hrl").
 
@@ -55,7 +59,7 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %% @end
 %%------------------------------------------------------------------------------
 -spec monitor_nodes(boolean(), pid()) -> ok.
-monitor_nodes(true, Pid)  -> gen_server:cast(?MODULE, {add, Pid});
+monitor_nodes(true, Pid) -> gen_server:cast(?MODULE, {add, Pid});
 monitor_nodes(false, Pid) -> gen_server:cast(?MODULE, {delete, Pid}).
 
 %%------------------------------------------------------------------------------
@@ -71,10 +75,11 @@ handlers() -> gen_server:call(?MODULE, handlers).
 %%%=============================================================================
 
 -record(state, {
-          nodes = []    :: [node()],
-          pattern       :: re:mp(),
-          mode          :: visible | hidden,
-          handlers = [] :: [{pid(), reference()}]}).
+    nodes = [] :: [node()],
+    pattern :: re:mp(),
+    mode :: visible | hidden,
+    handlers = [] :: [{pid(), reference()}]
+}).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -95,9 +100,9 @@ handle_call(_Request, _From, State) -> {reply, undef, State}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-handle_cast({add, Pid}, State)    -> {noreply, add_handler(Pid, State)};
+handle_cast({add, Pid}, State) -> {noreply, add_handler(Pid, State)};
 handle_cast({delete, Pid}, State) -> {noreply, delete_handler(Pid, State)};
-handle_cast(_Request, State)      -> {noreply, State}.
+handle_cast(_Request, State) -> {noreply, State}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -193,7 +198,8 @@ report(Handlers, visible, Node, up) ->
     %% This may block the whole server for some time. However, for the sake of
     %% correctness, we still must do it this way, because the last thing we
     %% want is disordered up/down messages from a node.
-    _ = case bootstrap_lib:get_env(no_global_sync, false) of
+    _ =
+        case bootstrap_lib:get_env(no_global_sync, false) of
             false ->
                 Time = element(1, timer:tc(global, sync, [])) div 1000,
                 ?INFO("Global synchronization took ~pms.~n", [Time]);
@@ -216,4 +222,4 @@ matches(Node, #state{pattern = Pattern}) ->
 %% @private
 %%------------------------------------------------------------------------------
 to_monitor_nodes_options(visible) -> [{node_type, visible}, nodedown_reason];
-to_monitor_nodes_options(hidden)  -> [{node_type, all}, nodedown_reason].
+to_monitor_nodes_options(hidden) -> [{node_type, all}, nodedown_reason].

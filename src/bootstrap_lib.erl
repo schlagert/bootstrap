@@ -20,14 +20,16 @@
 -module(bootstrap_lib).
 
 %% API
--export([get_env/1,
-         get_env/2,
-         matches/2,
-         pattern/0,
-         mode/0,
-         matching/2,
-         nodes/1,
-         get_info/0]).
+-export([
+    get_env/1,
+    get_env/2,
+    matches/2,
+    pattern/0,
+    mode/0,
+    matching/2,
+    nodes/1,
+    get_info/0
+]).
 
 %%%=============================================================================
 %%% API
@@ -51,7 +53,7 @@ get_env(Key) -> element(2, {ok, _} = application:get_env(bootstrap, Key)).
 get_env(Key, Default) ->
     case application:get_env(bootstrap, Key) of
         {ok, Value} -> Value;
-        _           -> Default
+        _ -> Default
     end.
 
 %%------------------------------------------------------------------------------
@@ -113,5 +115,5 @@ get_info() -> {ok, node(), matching(pattern(), mode()), bootstrap:handlers()}.
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
-to_nodes_arg(hidden)  -> connected;
+to_nodes_arg(hidden) -> connected;
 to_nodes_arg(visible) -> visible.

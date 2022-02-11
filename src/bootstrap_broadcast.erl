@@ -49,7 +49,10 @@ addresses() -> addresses(bootstrap_lib:get_env(broadcast_ip, undefined)).
 addresses(Addr = {_, _, _, _}) ->
     [Addr];
 addresses(_) ->
-    [A || {ok, Is} <- [inet:getifaddrs()],
-          {_, L} <- Is,
-          {broadaddr, A = {_, _, _, _}} <- L,
-          lists:member(up, proplists:get_value(flags, L, []))].
+    [
+        A
+     || {ok, Is} <- [inet:getifaddrs()],
+        {_, L} <- Is,
+        {broadaddr, A = {_, _, _, _}} <- L,
+        lists:member(up, proplists:get_value(flags, L, []))
+    ].

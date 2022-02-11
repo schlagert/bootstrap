@@ -40,12 +40,14 @@
 -export([start_link/0]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_cast/2,
-         handle_call/3,
-         handle_info/2,
-         code_change/3,
-         terminate/2]).
+-export([
+    init/1,
+    handle_cast/2,
+    handle_call/3,
+    handle_info/2,
+    code_change/3,
+    terminate/2
+]).
 
 -include("bootstrap.hrl").
 
@@ -81,29 +83,34 @@ start_link() -> gen_server:start_link(?MODULE, [], []).
 %%%=============================================================================
 
 -record(state, {
-          mode     :: visible | hidden,
-          pattern  :: re:mp(),
-          protocol :: module(),
-          port     :: -1 | inet:port_number(),
-          socket   :: inet:socket() | undefined,
-          timer    :: reference() | undefined,
-          minimum  :: non_neg_integer() | infinity,
-          timeout  :: non_neg_integer()}).
+    mode :: visible | hidden,
+    pattern :: re:mp(),
+    protocol :: module(),
+    port :: -1 | inet:port_number(),
+    socket :: inet:socket() | undefined,
+    timer :: reference() | undefined,
+    minimum :: non_neg_integer() | infinity,
+    timeout :: non_neg_integer()
+}).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
-    {ok, timer_backoff(
-           open_udp_port(
-             #state{
-                mode     = bootstrap_lib:mode(),
-                pattern  = bootstrap_lib:pattern(),
-                protocol = to_mod(bootstrap_lib:get_env(protocol)),
-                port     = bootstrap_lib:get_env(primary_port),
-                minimum  = bootstrap_lib:get_env(min_connections),
-                timeout  = bootstrap_lib:get_env(ping_timeout)}))}.
+    {ok,
+        timer_backoff(
+            open_udp_port(
+                #state{
+                    mode = bootstrap_lib:mode(),
+                    pattern = bootstrap_lib:pattern(),
+                    protocol = to_mod(bootstrap_lib:get_env(protocol)),
+                    port = bootstrap_lib:get_env(primary_port),
+                    minimum = bootstrap_lib:get_env(min_connections),
+                    timeout = bootstrap_lib:get_env(ping_timeout)
+                }
+            )
+        )}.
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -128,12 +135,16 @@ handle_info({udp, S, IP, Port, Data}, State = #state{socket = S}) ->
         {_, ?BOOTSTRAP_PONG(Node, _)} when Node == node() ->
             {noreply, State};
         {_, ?BOOTSTRAP_PONG(Node, PingNode)} ->
-            ?DBG("Got PONG from ~s (answering ~s) with source port ~w.~n",
-                 [Node, PingNode, Port]),
+            ?DBG(
+                "Got PONG from ~s (answering ~s) with source port ~w.~n",
+                [Node, PingNode, Port]
+            ),
             {noreply, handle_pong(Node, PingNode, State)};
         {{I1, I2, I3, I4}, Msg} ->
-            ?DBG("Ignoring ~w from ~w.~w.~w.~w:~w.~n",
-                 [Msg, I1, I2, I3, I4, Port]),
+            ?DBG(
+                "Ignoring ~w from ~w.~w.~w.~w:~w.~n",
+                [Msg, I1, I2, I3, I4, Port]
+            ),
             {noreply, State}
     catch
         _:_ -> {noreply, State}
@@ -233,7 +244,10 @@ realloc_port_timer(_SecondaryPort, State) ->
 %% @private
 %%------------------------------------------------------------------------------
 ping_timer(Millis, State = #state{timer = OldRef}) ->
-    case OldRef of undefined -> ok; _ -> erlang:cancel_timer(OldRef) end,
+    case OldRef of
+        undefined -> ok;
+        _ -> erlang:cancel_timer(OldRef)
+    end,
     State#state{timer = start_timer(Millis, ping)}.
 
 %%------------------------------------------------------------------------------
@@ -245,11 +259,14 @@ start_timer(Millis, Message) -> erlang:start_timer(Millis, self(), Message).
 %% @private
 %%------------------------------------------------------------------------------
 handle_ping(PingNode, PingAddr = {I1, I2, I3, I4}, InPort, State) ->
-    [begin
-         Msg = term_to_binary(?BOOTSTRAP_PONG(node(), PingNode)),
-         ok = gen_udp:send(State#state.socket, PingAddr, Port, Msg),
-         ?DBG("Sent PONG to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
-     end || Port <- lists:usort([InPort, State#state.port])],
+    [
+        begin
+            Msg = term_to_binary(?BOOTSTRAP_PONG(node(), PingNode)),
+            ok = gen_udp:send(State#state.socket, PingAddr, Port, Msg),
+            ?DBG("Sent PONG to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
+        end
+     || Port <- lists:usort([InPort, State#state.port])
+    ],
     maybe_backoff(InPort, PingNode, State).
 
 %%------------------------------------------------------------------------------
@@ -258,14 +275,16 @@ handle_ping(PingNode, PingAddr = {I1, I2, I3, I4}, InPort, State) ->
 handle_pong(Node, PingNode, State) when PingNode == node() ->
     maybe_connect(Node, State);
 handle_pong(Node, PingNode, State) ->
-    maybe_backoff(PingNode, maybe_connect(PingNode, maybe_connect(Node, State))).
+    maybe_backoff(
+        PingNode, maybe_connect(PingNode, maybe_connect(Node, State))
+    ).
 
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
 maybe_ping(State = #state{pattern = P, mode = Mode, minimum = M}) ->
     case M == infinity orelse length(bootstrap_lib:matching(P, Mode)) < M of
-        true  -> do_ping(State);
+        true -> do_ping(State);
         false -> State
     end.
 
@@ -278,11 +297,14 @@ do_ping([], State) ->
     ?ERR("No network addresses to send to.", []),
     State;
 do_ping(Addresses, State = #state{socket = Socket, port = Port}) ->
-    [begin
-         Msg = term_to_binary(?BOOTSTRAP_PING(node(), Addr)),
-         ok = gen_udp:send(Socket, Addr, Port, Msg),
-         ?DBG("Sent PING to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
-     end || Addr = {I1, I2, I3, I4} <- Addresses],
+    [
+        begin
+            Msg = term_to_binary(?BOOTSTRAP_PING(node(), Addr)),
+            ok = gen_udp:send(Socket, Addr, Port, Msg),
+            ?DBG("Sent PING to ~w.~w.~w.~w:~w.~n", [I1, I2, I3, I4, Port])
+        end
+     || Addr = {I1, I2, I3, I4} <- Addresses
+    ],
     State.
 
 %%------------------------------------------------------------------------------
@@ -291,12 +313,12 @@ do_ping(Addresses, State = #state{socket = Socket, port = Port}) ->
 maybe_connect(Node, State = #state{mode = Mode, pattern = Pattern}) ->
     case {Mode, bootstrap_lib:matches(Node, Pattern)} of
         {visible, true} -> Result = net_kernel:connect_node(Node);
-        {hidden, true}  -> Result = net_kernel:hidden_connect_node(Node);
-        {_, false}      -> Result = skipped
+        {hidden, true} -> Result = net_kernel:hidden_connect_node(Node);
+        {_, false} -> Result = skipped
     end,
     case Result of
-        false   -> ?ERR("Failed to connect to matching node ~s.", [Node]);
-        true    -> ?DBG("Connected to matching node ~s.~n", [Node]);
+        false -> ?ERR("Failed to connect to matching node ~s.", [Node]);
+        true -> ?DBG("Connected to matching node ~s.~n", [Node]);
         skipped -> ok
     end,
     State.
@@ -310,7 +332,7 @@ maybe_connect(Node, State = #state{mode = Mode, pattern = Pattern}) ->
 %% at all, implication is that it must be the pinger.
 %%------------------------------------------------------------------------------
 maybe_backoff(P, Node, State = #state{port = P}) -> maybe_backoff(Node, State);
-maybe_backoff(_Port, _Node, State)               -> timer_backoff(State).
+maybe_backoff(_Port, _Node, State) -> timer_backoff(State).
 
 %%------------------------------------------------------------------------------
 %% @private
@@ -322,4 +344,4 @@ maybe_backoff(_Port, _Node, State)               -> timer_backoff(State).
 %% one pinger is allowed.
 %%------------------------------------------------------------------------------
 maybe_backoff(Node, State) when Node < node() -> timer_backoff(State);
-maybe_backoff(_Node, State)                   -> State.
+maybe_backoff(_Node, State) -> State.

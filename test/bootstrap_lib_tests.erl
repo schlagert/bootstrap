@@ -24,11 +24,10 @@
 %%%=============================================================================
 
 get_env_test_() ->
-    {setup, setup(), teardown(),
-     [
-      fun get_env_1/0,
-      fun get_env_2/0
-     ]}.
+    {setup, setup(), teardown(), [
+        fun get_env_1/0,
+        fun get_env_2/0
+    ]}.
 
 get_env_1() ->
     ?assertEqual(value1, bootstrap_lib:get_env(key1)),
@@ -74,9 +73,9 @@ matching_test() ->
 %%------------------------------------------------------------------------------
 setup() ->
     fun() ->
-            ok = application:set_env(bootstrap, key1, value1),
-            ok = application:set_env(bootstrap, key2, value2),
-            ok = application:set_env(bootstrap, connect_regex, ".*")
+        ok = application:set_env(bootstrap, key1, value1),
+        ok = application:set_env(bootstrap, key2, value2),
+        ok = application:set_env(bootstrap, connect_regex, ".*")
     end.
 
 %%------------------------------------------------------------------------------
