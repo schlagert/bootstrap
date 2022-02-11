@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013-2017, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2022, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
 %%%=============================================================================
 {application, bootstrap, [
     {description, "A simple, yet powerful cluster bootstrapping application."},
-    {vsn, "1.1.0"},
+    {vsn, "1.2.0"},
     {registered, [
         bootstrap,
         bootstrap_monitor

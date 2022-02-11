@@ -1,5 +1,5 @@
 %%%=============================================================================
-%%% Copyright 2013-2021, Tobias Schlager <schlagert@github.com>
+%%% Copyright 2013-2022, Tobias Schlager <schlagert@github.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -13,12 +13,14 @@
 %%% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%=============================================================================
-{"1.1.0",
+{"1.2.0",
     [
+        {"1.1.0", [{restart_application, bootstrap}]},
         {"1.0.1", [{restart_application, bootstrap}]},
         {"1.0.0", [{restart_application, bootstrap}]}
     ],
     [
+        {"1.1.0", [{restart_application, bootstrap}]},
         {"1.0.1", [{restart_application, bootstrap}]},
         {"1.0.0", [{restart_application, bootstrap}]}
     ]}.

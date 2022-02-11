@@ -290,6 +290,10 @@ following:
 History
 -------
 
+### Master
+
+No changes
+
 ### Version 1.1.0
 
 * Remove support for OTP 17
